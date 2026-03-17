@@ -1,0 +1,71 @@
+{% load currency_filters %}
+
+<div class="order-card">
+    <!-- Order Header -->
+    <div class="order-header">
+        <div>
+            <div class="order-id">Order #{{ order.order_number }}</div>
+            <div class="order-date">
+                <i class="far fa-calendar me-1"></i>
+                {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|date:"g:i A" }}
+            </div>
+        </div>
+        <div>
+            <span class="order-status status-{{ order.status }}">
+                {{ order.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="order-items">
+        {% for item in order.items.all|slice:":3" %}
+        <div class="order-item">
+            <div>
+                {% if item.product.images.first %}
+                <img src="{{ item.product.images.first.image.url }}" 
+                     alt="{{ item.product.name }}" 
+                     class="order-item-image">
+                {% else %}
+                <img src="https://via.placeholder.com/60x60?text=No+Image" 
+                     alt="{{ item.product.name }}" 
+                     class="order-item-image">
+                {% endif %}
+            </div>
+            <div class="order-item-details">
+                <div class="order-item-name">{{ item.product.name }}</div>
+                <div class="order-item-meta">
+                    Size: {{ item.size }} | Qty: {{ item.quantity }} | {{ item.price|inr }} each
+                </div>
+            </div>
+            <div class="text-end">
+                <strong>{{ item.get_subtotal|inr }}</strong>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% if order.items.count > 3 %}
+        <div class="text-muted small mt-2">
+            + {{ order.items.count|add:"-3" }} more item{{ order.items.count|add:"-3"|pluralize }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Order Footer -->
+    <div class="order-footer">
+        <div>
+            <div class="text-muted small">Total Amount</div>
+            <div class="order-total">{{ order.total_amount|inr }}</div>
+        </div>
+        <div class="order-actions">
+            <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-outline-primary btn-order">
+                <i class="fas fa-eye me-1"></i>View Details
+            </a>
+            {% if order.status in 'pending,processing,shipped,out_for_delivery' %}
+            <a href="{% url 'orders:track_order' order.id %}" class="btn btn-primary btn-order">
+                <i class="fas fa-map-marker-alt me-1"></i>Track Order
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>

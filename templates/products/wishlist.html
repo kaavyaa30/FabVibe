@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Wishlist - FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wishlist-item {
+        transition: transform 0.3s ease;
+    }
+    
+    .wishlist-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .wishlist-item img {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+    }
+    
+    .product-price {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .remove-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+    
+    .empty-wishlist {
+        text-align: center;
+        padding: 60px 20px;
+    }
+    
+    .empty-wishlist i {
+        font-size: 80px;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">
+        <i class="fas fa-heart text-danger"></i> My Wishlist
+    </h1>
+    
+    <div id="wishlistContainer">
+        <!-- Wishlist items will be loaded here via AJAX -->
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadWishlist();
+    });
+    
+    function loadWishlist() {
+        fetch('{% url "products:get_wishlist_items" %}')
+            .then(response => response.json())
+            .then(data => {
+                displayWishlist(data.items);
+            })
+            .catch(error => {
+                console.error('Error loading wishlist:', error);
+                document.getElementById('wishlistContainer').innerHTML = 
+                    '<div class="alert alert-danger">Failed to load wishlist. Please try again.</div>';
+            });
+    }
+    
+    function displayWishlist(items) {
+        const container = document.getElementById('wishlistContainer');
+        
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div class="empty-wishlist">
+                    <i class="far fa-heart"></i>
+                    <h3>Your wishlist is empty</h3>
+                    <p class="text-muted">Save your favorite items to your wishlist</p>
+                    <a href="{% url 'products:home' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-shopping-bag"></i> Continue Shopping
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '<div class="row g-4">';
+        items.forEach(item => {
+            html += `
+                <div class="col-lg-3 col-md-4 col-sm-6" id="wishlist-item-${item.product_id}">
+                    <div class="card wishlist-item h-100">
+                        <div class="position-relative">
+                            <a href="${item.product_url}">
+                                <img src="${item.image_url}" class="card-img-top" alt="${item.name}">
+                            </a>
+                            <button class="btn btn-danger btn-sm remove-btn" onclick="removeFromWishlist(${item.product_id})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <a href="${item.product_url}" class="text-decoration-none">
+                                    ${item.name}
+                                </a>
+                            </h6>
+                            <p class="product-price mb-2">$${item.price}</p>
+                            ${item.in_stock ? 
+                                '<span class="badge bg-success">In Stock</span>' : 
+                                '<span class="badge bg-danger">Out of Stock</span>'
+                            }
+                            ${item.in_stock ? 
+                                `<button class="btn btn-primary btn-sm w-100 mt-2" onclick="addToCart(${item.product_id})">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                                </button>` : ''
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    }
+    
+    function removeFromWishlist(productId) {
+        if (!confirm('Remove this item from your wishlist?')) {
+            return;
+        }
+        
+        fetch(`/products/wishlist/remove/${productId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove item from display
+                const itemElement = document.getElementById(`wishlist-item-${productId}`);
+                if (itemElement) {
+                    itemElement.remove();
+                }
+                
+                // Reload wishlist if no items left
+                const container = document.getElementById('wishlistContainer');
+                if (container.querySelectorAll('.wishlist-item').length === 0) {
+                    loadWishlist();
+                }
+            } else {
+                alert(data.message || 'Failed to remove item from wishlist');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+    
+    function addToCart(productId) {
+        fetch(`/cart/add/${productId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Product added to cart!');
+                location.reload();
+            } else {
+                alert(data.message || 'Failed to add product to cart');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    }
+</script>
+{% endblock %}

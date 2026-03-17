@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Summary - FabVibe{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Order Summary</h2>
+    
+    <!-- Checkout Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="mt-2 text-muted">Shipping Address</div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #28a745;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>2</strong>
+                    </div>
+                    <div class="mt-2"><strong>Order Summary</strong></div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #ddd;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>3</strong>
+                    </div>
+                    <div class="mt-2 text-muted">Payment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Order Details -->
+        <div class="col-md-8">
+            <!-- Shipping Address -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Shipping Address</h5>
+                    <a href="{% url 'orders:checkout' %}" class="btn btn-sm btn-outline-primary">Change</a>
+                </div>
+                <div class="card-body">
+                    <strong>{{ address.full_name }}</strong>
+                    <div class="text-muted mt-2">
+                        {{ address.address_line1 }}
+                        {% if address.address_line2 %}
+                            <br>{{ address.address_line2 }}
+                        {% endif %}
+                        <br>{{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                        <br>{{ address.country }}
+                        <br>Phone: {{ address.phone_number }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Order Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Order Items</h5>
+                </div>
+                <div class="card-body">
+                    {% for item in cart_items %}
+                        <div class="row mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                            <div class="col-md-2">
+                                {% if item.product.images.first %}
+                                    <img src="{{ item.product.images.first.image.url }}" 
+                                         alt="{{ item.product.name }}" 
+                                         class="img-fluid rounded">
+                                {% else %}
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style="height: 80px;">
+                                        <i class="fas fa-image fa-2x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6>{{ item.product.name }}</h6>
+                                <p class="text-muted mb-1">Size: {{ item.size }}</p>
+                                <p class="text-muted mb-0">Quantity: {{ item.quantity }}</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <p class="mb-0">₹{{ item.product.price }} × {{ item.quantity }}</p>
+                                <h6 class="mt-2">₹{{ item.get_subtotal }}</h6>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Price Breakdown -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Price Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal ({{ cart_items.count }} items)</span>
+                        <span>₹{{ subtotal }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (18%)</span>
+                        <span>₹{{ tax|floatformat:2 }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping Charges</span>
+                        {% if shipping_charge == 0 %}
+                            <span class="text-success">FREE</span>
+                        {% else %}
+                            <span>₹{{ shipping_charge }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if shipping_charge > 0 %}
+                        <div class="alert alert-info py-2 px-3 mb-3">
+                            <small>Add ₹{{ 500|add:"-"|add:subtotal }} more for FREE shipping!</small>
+                        </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total Amount</strong>
+                        <strong class="text-primary">₹{{ total|floatformat:2 }}</strong>
+                    </div>
+                    
+                    {% if inventory_errors %}
+                    <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:.85rem;">
+                        <strong><i class="fas fa-exclamation-triangle me-1"></i> Stock issue:</strong>
+                        <ul class="mb-1 mt-1 ps-3">
+                            {% for err in inventory_errors %}
+                            <li>{{ err }}</li>
+                            {% endfor %}
+                        </ul>
+                        <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger mt-1">
+                            Fix Cart
+                        </a>
+                    </div>
+                    {% else %}
+                    <form method="get" action="{% url 'orders:payment_method_selection' %}">
+                        <button type="submit" class="btn btn-primary w-100 mb-2">
+                            Proceed to Payment <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'orders:checkout' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-arrow-left"></i> Back to Address
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

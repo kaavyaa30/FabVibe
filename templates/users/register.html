@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        min-height: calc(100vh - 76px);
+        display: flex;
+        align-items: center;
+        padding: 3rem 0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .auth-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    
+    .auth-header {
+        background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
+        color: white;
+        padding: 2.5rem 2rem;
+        text-align: center;
+    }
+    
+    .auth-header h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+    }
+    
+    .auth-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 1;
+        font-size: 0.95rem;
+        color: white;
+    }
+    
+    .auth-body {
+        padding: 2.5rem 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.95rem;
+    }
+    
+    .form-control {
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #456273;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+        outline: none;
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        margin-top: 0.25rem;
+    }
+    
+    .text-danger {
+        color: #e74c3c;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    
+    .btn-register {
+        width: 100%;
+        padding: 0.875rem;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+    
+    .btn-register:hover {
+        background: linear-gradient(135deg, #3d5a6b 0%, #2471a3 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(74, 37, 69, 0.4);
+    }
+    
+    .auth-footer {
+        text-align: center;
+        padding: 1.5rem 2rem;
+        background: #f8f9fa;
+        border-top: 1px solid #e0e0e0;
+    }
+    
+    .auth-footer p {
+        margin: 0;
+        color: #7f8c8d;
+    }
+    
+    .auth-footer a {
+        color: #456273;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    
+    .auth-footer a:hover {
+        color: #4e6a7a;
+        text-decoration: underline;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        border: none;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        background: #fee;
+        color: #c0392b;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .required-indicator {
+        color: #e74c3c;
+        margin-left: 2px;
+    }
+    
+    .password-requirements {
+        background: #f8f9fa;
+        border-left: 3px solid #456273;
+        padding: 0.75rem 1rem;
+        margin-top: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .password-requirements ul {
+        margin: 0.5rem 0 0 0;
+        padding-left: 1.25rem;
+    }
+    
+    .password-requirements li {
+        color: #7f8c8d;
+        margin-bottom: 0.25rem;
+    }
+    
+    @media (max-width: 576px) {
+        .auth-page {
+            padding: 1.5rem 0;
+        }
+        
+        .auth-header {
+            padding: 2rem 1.5rem;
+        }
+        
+        .auth-header h2 {
+            font-size: 1.75rem;
+        }
+        
+        .auth-body {
+            padding: 2rem 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="auth-card">
+                    <!-- Header -->
+                    <div class="auth-header">
+                        <h2>Create Your Account</h2>
+                        <p>Join FabVibe and start shopping today</p>
+                    </div>
+                    
+                    <!-- Body -->
+                    <div class="auth-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }}" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.first_name.id_for_label }}">
+                                            First Name <span class="required-indicator">*</span>
+                                        </label>
+                                        {{ form.first_name }}
+                                        {% if form.first_name.errors %}
+                                            {% for error in form.first_name.errors %}
+                                                <span class="text-danger">{{ error }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="{{ form.last_name.id_for_label }}">
+                                            Last Name <span class="required-indicator">*</span>
+                                        </label>
+                                        {{ form.last_name }}
+                                        {% if form.last_name.errors %}
+                                            {% for error in form.last_name.errors %}
+                                                <span class="text-danger">{{ error }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.email.id_for_label }}">
+                                    Email Address <span class="required-indicator">*</span>
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    {% for error in form.email.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                                {{ form.phone_number }}
+                                <small class="form-text">Format: +1234567890 (optional)</small>
+                                {% if form.phone_number.errors %}
+                                    {% for error in form.phone_number.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.password1.id_for_label }}">
+                                    Password <span class="required-indicator">*</span>
+                                </label>
+                                {{ form.password1 }}
+                                <div class="password-requirements">
+                                    <strong>Password must contain:</strong>
+                                    <ul>
+                                        <li>At least 8 characters</li>
+                                        <li>Mix of uppercase and lowercase letters</li>
+                                        <li>At least one number</li>
+                                    </ul>
+                                </div>
+                                {% if form.password1.errors %}
+                                    {% for error in form.password1.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="{{ form.password2.id_for_label }}">
+                                    Confirm Password <span class="required-indicator">*</span>
+                                </label>
+                                {{ form.password2 }}
+                                {% if form.password2.errors %}
+                                    {% for error in form.password2.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in form.non_field_errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <button type="submit" class="btn btn-register">
+                                <i class="fas fa-user-plus me-2"></i> Create Account
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="auth-footer">
+                        <p>Already have an account? <a href="{% url 'users:login' %}">Sign in here</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

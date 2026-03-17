@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Method - FabVibe{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Select Payment Method</h2>
+    
+    <!-- Checkout Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="mt-2 text-muted">Shipping Address</div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #28a745;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="mt-2 text-muted">Order Summary</div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #28a745;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>3</strong>
+                    </div>
+                    <div class="mt-2"><strong>Payment</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Payment Method Selection -->
+        <div class="col-md-8">
+            <!-- Inventory error banner -->
+            {% if inventory_errors %}
+            <div class="alert alert-danger mb-4">
+                <strong>Some items in your cart are out of stock:</strong>
+                <ul class="mb-0 mt-2">
+                    {% for err in inventory_errors %}
+                    <li>{{ err }}</li>
+                    {% endfor %}
+                </ul>
+                <div class="mt-2">
+                    <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger">
+                        Go to Cart &amp; Fix
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card mb-4">
+                <div class="card-header" style="color:#fff;">
+                    <h5 class="mb-0">Choose Payment Method</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="paymentForm">
+                        {% csrf_token %}
+                        
+                        <!-- Cash on Delivery -->
+                        <div class="payment-option mb-3">
+                            <div class="form-check p-3 border rounded">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="cod" value="cod" required>
+                                <label class="form-check-label w-100" for="cod">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                                Cash on Delivery (COD)
+                                            </h6>
+                                            <p class="text-muted mb-0 small">Pay with cash when your order is delivered</p>
+                                        </div>
+                                        <i class="fas fa-chevron-right text-muted"></i>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- UPI Payment -->
+                        <div class="payment-option mb-3">
+                            <div class="form-check p-3 border rounded">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="upi" value="upi" required>
+                                <label class="form-check-label w-100" for="upi">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-mobile-alt text-primary me-2"></i>
+                                                UPI Payment
+                                            </h6>
+                                            <p class="text-muted mb-0 small">Pay using Google Pay, PhonePe, Paytm, or any UPI app</p>
+                                        </div>
+                                        <i class="fas fa-chevron-right text-muted"></i>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Credit/Debit Card -->
+                        <div class="payment-option mb-3">
+                            <div class="form-check p-3 border rounded">
+                                <input class="form-check-input" type="radio" name="payment_method" 
+                                       id="card" value="card" required>
+                                <label class="form-check-label w-100" for="card">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-credit-card text-info me-2"></i>
+                                                Credit / Debit Card
+                                            </h6>
+                                            <p class="text-muted mb-0 small">Pay securely using your credit or debit card</p>
+                                            <div class="mt-2">
+                                                <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" style="height: 24px;" class="me-2">
+                                                <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" style="height: 24px;" class="me-2">
+                                                <img src="https://img.icons8.com/color/48/000000/rupay.png" alt="RuPay" style="height: 24px;">
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-chevron-right text-muted"></i>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                Continue to Payment <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Security Info -->
+            <div class="alert alert-info">
+                <i class="fas fa-shield-alt me-2"></i>
+                <strong>Safe and Secure Payments.</strong> 100% Payment Protection. Easy Returns.
+            </div>
+        </div>
+        
+        <!-- Order Summary Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header" style="color:#fff;">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Shipping Address -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Delivering to:</h6>
+                        <strong>{{ address.full_name }}</strong>
+                        <div class="text-muted small mt-1">
+                            {{ address.address_line1 }}, {{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Price Breakdown -->
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal ({{ cart_items.count }} items)</span>
+                        <span>₹{{ subtotal }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax (18%)</span>
+                        <span>₹{{ tax|floatformat:2 }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping Charges</span>
+                        {% if shipping_charge == 0 %}
+                            <span class="text-success">FREE</span>
+                        {% else %}
+                            <span>₹{{ shipping_charge }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total Amount</strong>
+                        <strong class="text-primary">₹{{ total|floatformat:2 }}</strong>
+                    </div>
+                    
+                    <a href="{% url 'orders:order_summary' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-arrow-left"></i> Back to Summary
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.payment-option .form-check-input:checked ~ .form-check-label {
+    border-color: #456273;
+    background-color: #f0f8ff;
+}
+
+.payment-option .form-check {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.payment-option .form-check:hover {
+    border-color: #456273 !important;
+    box-shadow: 0 0 10px rgba(13, 110, 253, 0.1);
+}
+
+.payment-option .form-check-input {
+    margin-top: 0.5rem;
+}
+</style>
+
+<script>
+// Add visual feedback when payment method is selected
+document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.payment-option .form-check').forEach(option => {
+            option.classList.remove('border-primary');
+        });
+        if (this.checked) {
+            this.closest('.form-check').classList.add('border-primary');
+        }
+    });
+});
+</script>
+{% endblock %}

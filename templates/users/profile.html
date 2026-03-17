@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - FabVibe{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h2 class="mb-4">My Profile</h2>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Profile Information Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger">{{ form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger">{{ form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                            <small class="text-muted">Email cannot be changed</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.errors %}
+                                <div class="text-danger">{{ form.phone_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Shipping Addresses Section -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Shipping Addresses</h5>
+                    <a href="{% url 'users:add_address' %}" class="btn btn-sm btn-primary">Add New Address</a>
+                </div>
+                <div class="card-body">
+                    {% if addresses %}
+                        <div class="row">
+                            {% for address in addresses %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card {% if address.is_default %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            {% if address.is_default %}
+                                                <span class="badge bg-primary mb-2">Default</span>
+                                            {% endif %}
+                                            <h6 class="card-title">{{ address.full_name }}</h6>
+                                            <p class="card-text mb-1">
+                                                {{ address.address_line1 }}<br>
+                                                {% if address.address_line2 %}
+                                                    {{ address.address_line2 }}<br>
+                                                {% endif %}
+                                                {{ address.city }}, {{ address.state }} {{ address.postal_code }}<br>
+                                                {{ address.country }}
+                                            </p>
+                                            <p class="card-text mb-2">
+                                                <small class="text-muted">Phone: {{ address.phone_number }}</small>
+                                            </p>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'users:edit_address' address.id %}" class="btn btn-outline-primary">Edit</a>
+                                                <a href="{% url 'users:delete_address' address.id %}" class="btn btn-outline-danger">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No shipping addresses added yet.</p>
+                        <a href="{% url 'users:add_address' %}" class="btn btn-primary">Add Your First Address</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

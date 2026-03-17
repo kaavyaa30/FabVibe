@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}FabVibe - Fashion E-commerce{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Full-Height Hero Banner */
+    .hero-banner {
+        position: relative;
+        height: calc(100vh - 76px); /* Full viewport height minus navbar */
+        min-height: 600px;
+        background: linear-gradient(135deg, #3d5a6b 0%, #3d5a6b 100%);
+        background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=1080&fit=crop');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        margin-bottom: 4rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to right, rgba(74, 37, 69, 0.8) 0%, rgba(74, 37, 69, 0.5) 50%, rgba(74, 37, 69, 0.3) 100%);
+        z-index: 1;
+    }
+    
+    .hero-banner .container {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+    }
+    
+    .hero-content {
+        max-width: 650px;
+        padding: 2rem 0;
+    }
+    
+    .hero-title {
+        font-size: 4.5rem;
+        font-weight: 700;
+        color: white;
+        line-height: 1.2;
+        margin-bottom: 2rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        letter-spacing: -1px;
+        animation: fadeInUp 0.8s ease;
+    }
+    
+    .hero-description {
+        font-size: 1.3rem;
+        color: rgba(255,255,255,0.95);
+        margin-bottom: 2.5rem;
+        line-height: 1.7;
+        animation: fadeInUp 1s ease;
+    }
+    
+    .hero-btn {
+        display: inline-block;
+        padding: 1.2rem 3rem;
+        background: #456273;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: none;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(74, 37, 69, 0.3);
+        animation: fadeInUp 1.2s ease;
+    }
+    
+    .hero-btn:hover {
+        background: #4e6a7a;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(74, 37, 69, 0.4);
+    }
+    
+    /* Scroll Indicator */
+    .scroll-indicator {
+        position: absolute;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        animation: bounce 2s infinite;
+    }
+    
+    .scroll-indicator i {
+        color: white;
+        font-size: 2rem;
+        opacity: 0.8;
+    }
+    
+    /* Content Sections */
+    .featured-categories,
+    .new-arrivals {
+        padding: 4rem 0;
+    }
+    
+    /* Section Titles */
+    .section-title {
+        color: #2c3e50;
+        font-weight: 700;
+        font-size: 2.5rem;
+        position: relative;
+        padding-bottom: 1rem;
+        margin-bottom: 3rem;
+        text-align: center;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 3px;
+        background: #456273;
+    }
+    
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateX(-50%) translateY(0);
+        }
+        40% {
+            transform: translateX(-50%) translateY(-10px);
+        }
+        60% {
+            transform: translateX(-50%) translateY(-5px);
+        }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .hero-banner {
+            height: calc(100vh - 76px);
+            min-height: 500px;
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .hero-description {
+            font-size: 1.1rem;
+        }
+        
+        .hero-btn {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .hero-banner {
+            height: calc(100vh - 76px);
+            min-height: 450px;
+        }
+        
+        .hero-title {
+            font-size: 2rem;
+        }
+        
+        .hero-btn {
+            padding: 0.9rem 2rem;
+            font-size: 0.95rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+        }
+    }
+    
+    /* Container */
+    .container {
+        max-width: 1320px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Static Hero Banner Section -->
+<section class="hero-banner">
+    <div class="hero-overlay"></div>
+    <div class="container h-100">
+        <div class="row h-100 align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <h1 class="hero-title">FabVibe Shopping</h1>
+                    <p class="hero-description">Discover the latest trends in fashion. Elevate your style with our curated collection of premium clothing and accessories.</p>
+                    <a href="{% url 'products:home' %}#categories" class="hero-btn">Explore Collection</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Categories Section -->
+{% if featured_categories %}
+<section class="featured-categories section-spacing" id="categories">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">Shop by Category</h2>
+        <div class="row g-4 mt-4">
+            {% for category in featured_categories %}
+            <div class="col-lg-4 col-md-6">
+                <a href="{% url 'products:category_products' category.slug %}" class="category-card card text-decoration-none">
+                    {% if category.image %}
+                    <img src="{{ category.image.url }}" class="card-img-top" alt="{{ category.name }}">
+                    {% else %}
+                    <img src="https://via.placeholder.com/400x280?text={{ category.name }}" class="card-img-top" alt="{{ category.name }}">
+                    {% endif %}
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ category.name }}</h5>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- New Arrivals Section -->
+{% if new_arrivals %}
+<section class="new-arrivals section-spacing">
+    <div class="container">
+        <h2 class="section-title text-center mb-5">New Arrivals</h2>
+        <div class="row g-4 mt-4">
+            {% for product in new_arrivals %}
+            <div class="col-lg-3 col-md-4 col-sm-6">
+                <div class="card product-card h-100">
+                    <div class="position-relative">
+                        <a href="{% url 'products:product_detail' product.slug %}">
+                            {% if product.images.all %}
+                                <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/320x320?text=No+Image" class="card-img-top" alt="{{ product.name }}">
+                            {% endif %}
+                        </a>
+                        <button class="wishlist-btn-card" onclick="toggleWishlist({{ product.id }}, this)" title="Add to wishlist">
+                            <i class="{% if product.id in user_wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title flex-grow-1">
+                            <a href="{% url 'products:product_detail' product.slug %}" class="text-decoration-none">
+                                {{ product.name }}
+                            </a>
+                        </h6>
+                        <p class="product-price mb-2">{{ product.price|inr }}</p>
+                        <div class="mt-auto">
+                            {% if product.is_in_stock %}
+                                <span class="badge bg-success">In Stock</span>
+                            {% else %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- No carousel JavaScript needed -->
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard — FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: #456273;
+        color: #fff;
+        padding: 2rem 0 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 0 0 12px 12px;
+    }
+    .dashboard-header h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .dashboard-header p {
+        opacity: 1;
+        color: #ffffff;
+        margin: 0.3rem 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+        border: none;
+        border-radius: 12px;
+        padding: 1.4rem 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        transition: transform 0.2s;
+        height: 100%;
+    }
+    .metric-card:hover { transform: translateY(-2px); }
+    .metric-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+    .metric-body .metric-value {
+        font-size: 1.9rem;
+        font-weight: 700;
+        line-height: 1;
+        color: #1a1a2e;
+    }
+    .metric-body .metric-label {
+        font-size: 0.82rem;
+        color: #6c757d;
+        margin-top: 0.2rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    /* Color themes for cards */
+    .card-shipped   { background: #eaf4fb; } .card-shipped   .metric-icon { background: #d0eaf8; color: #1a7abf; }
+    .card-delivered { background: #eafaf1; } .card-delivered .metric-icon { background: #c8f0da; color: #1a8a4a; }
+    .card-new       { background: #fef9ec; } .card-new       .metric-icon { background: #fdefc3; color: #b07d00; }
+    .card-processing{ background: #f0eeff; } .card-processing .metric-icon { background: #ddd8ff; color: #5a3fc0; }
+    .card-returned  { background: #fff4ec; } .card-returned  .metric-icon { background: #fde0c8; color: #c05a1a; }
+    .card-damaged   { background: #fef0f0; } .card-damaged   .metric-icon { background: #fdd8d8; color: #c01a1a; }
+    .card-instock   { background: #eafaf1; } .card-instock   .metric-icon { background: #c8f0da; color: #1a8a4a; }
+    .card-outstock  { background: #fef0f0; } .card-outstock  .metric-icon { background: #fdd8d8; color: #c01a1a; }
+
+    /* Section titles */
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #456273;
+        border-left: 4px solid #456273;
+        padding-left: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Tables */
+    .dash-table thead th {
+        background: #456273;
+        color: #fff;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: none;
+        padding: 0.75rem 1rem;
+    }
+    .dash-table tbody tr:hover { background: #f5f8fa; }
+    .dash-table td { vertical-align: middle; font-size: 0.9rem; padding: 0.7rem 1rem; }
+
+    /* Status badges */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3em 0.75em;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .status-pending      { background: #fdefc3; color: #b07d00; }
+    .status-processing   { background: #ddd8ff; color: #5a3fc0; }
+    .status-shipped      { background: #d0eaf8; color: #1a7abf; }
+    .status-out_for_delivery { background: #c8f0da; color: #1a8a4a; }
+    .status-delivered    { background: #c8f0da; color: #1a8a4a; }
+    .status-cancelled    { background: #fdd8d8; color: #c01a1a; }
+
+    /* Progress bar for stock */
+    .stock-bar { height: 6px; border-radius: 3px; background: #e9ecef; overflow: hidden; }
+    .stock-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .stock-ok   .stock-bar-fill { background: #28a745; }
+    .stock-low  .stock-bar-fill { background: #ffc107; }
+    .stock-out  .stock-bar-fill { background: #dc3545; }
+
+    .replenish-badge {
+        background: #fdefc3;
+        color: #b07d00;
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 0.25em 0.6em;
+        border-radius: 6px;
+    }
+
+    .card-section {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        overflow: hidden;
+    }
+    .card-section .card-header {
+        background: #fff;
+        border-bottom: 1px solid #eee;
+        padding: 1rem 1.25rem;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: #aaa;
+    }
+    .empty-state i { font-size: 2.5rem; margin-bottom: 0.5rem; display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header text-center">
+    <h1><i class="fas fa-chart-line me-2"></i>Dashboard</h1>
+    <p>Real-time overview of orders, inventory, and fulfilment</p>
+</div>
+
+<!-- ── SECTION 1: Order Metrics ── -->
+<div class="section-title mb-3"><i class="fas fa-box-open me-2"></i>Order Overview</div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-new">
+            <div class="metric-icon"><i class="fas fa-plus-circle"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_new_orders }}</div>
+                <div class="metric-label">New Orders</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-processing">
+            <div class="metric-icon"><i class="fas fa-cogs"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_processing }}</div>
+                <div class="metric-label">Processing</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-shipped">
+            <div class="metric-icon"><i class="fas fa-shipping-fast"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_shipped }}</div>
+                <div class="metric-label">Dispatched / Shipped</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-delivered">
+            <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_delivered }}</div>
+                <div class="metric-label">Delivered</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-returned">
+            <div class="metric-icon"><i class="fas fa-undo-alt"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_returned }}</div>
+                <div class="metric-label">Returned</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-damaged">
+            <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_damaged }}</div>
+                <div class="metric-label">Damaged Items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-instock">
+            <div class="metric-icon"><i class="fas fa-boxes"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_in_stock }}</div>
+                <div class="metric-label">Products In Stock</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="metric-card card-outstock">
+            <div class="metric-icon"><i class="fas fa-times-circle"></i></div>
+            <div class="metric-body">
+                <div class="metric-value">{{ total_out_of_stock }}</div>
+                <div class="metric-label">Out of Stock</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SECTION 2: Live Order Tracking ── -->
+<div class="section-title"><i class="fas fa-map-marker-alt me-2"></i>Live Order Tracking</div>
+<div class="card card-section mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Active Orders</span>
+        <span class="badge" style="background:#456273;">{{ live_orders|length }} orders</span>
+    </div>
+    <div class="card-body p-0">
+        {% if live_orders %}
+        <div class="table-responsive">
+            <table class="table dash-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Current Status</th>
+                        <th>Tracking #</th>
+                        <th>Est. Delivery</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in live_orders %}
+                    <tr>
+                        <td><strong>#{{ order.order_id }}</strong></td>
+                        <td>
+                            {% if order.user %}
+                                {{ order.user.get_full_name|default:order.user.email }}
+                            {% else %}
+                                <span class="text-muted">Guest</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.created_at|date:"d M Y" }}</td>
+                        <td>₹{{ order.total_amount }}</td>
+                        <td>
+                            <span class="status-badge status-{{ order.status }}">
+                                {% if order.status == 'pending' %}<i class="fas fa-clock"></i>
+                                {% elif order.status == 'processing' %}<i class="fas fa-cogs"></i>
+                                {% elif order.status == 'shipped' %}<i class="fas fa-truck"></i>
+                                {% elif order.status == 'out_for_delivery' %}<i class="fas fa-motorcycle"></i>
+                                {% endif %}
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if order.tracking_number %}
+                                <code>{{ order.tracking_number }}</code>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.estimated_delivery_date %}
+                                {{ order.estimated_delivery_date|date:"d M Y" }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-check-double text-success"></i>
+            <p class="mb-0">No active orders right now.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ── SECTION 3: Inventory ── -->
+<div class="row g-4 mb-4">
+    <!-- Low Stock -->
+    <div class="col-lg-6">
+        <div class="section-title"><i class="fas fa-exclamation-circle me-2"></i>Low Stock Items</div>
+        <div class="card card-section">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Stock ≤ 10 units</span>
+                <span class="badge bg-warning text-dark">{{ low_stock_count }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table dash-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Size</th>
+                                <th>Qty</th>
+                                <th>Stock Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight:600;">{{ item.product.name }}</div>
+                                    <small class="text-muted">{{ item.product.category.name }}</small>
+                                </td>
+                                <td>{{ item.size }}</td>
+                                <td>
+                                    <span class="fw-bold {% if item.quantity == 0 %}text-danger{% elif item.quantity <= 5 %}text-warning{% else %}text-info{% endif %}">
+                                        {{ item.quantity }}
+                                    </span>
+                                </td>
+                                <td style="min-width:80px;">
+                                    <div class="stock-bar {% if item.quantity == 0 %}stock-out{% elif item.quantity <= 5 %}stock-low{% else %}stock-low{% endif %}">
+                                        <div class="stock-bar-fill" style="width:{% widthratio item.quantity 10 100 %}%"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <p class="mb-0">All items are well stocked.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Out of Stock -->
+    <div class="col-lg-6">
+        <div class="section-title"><i class="fas fa-times-circle me-2"></i>Out of Stock</div>
+        <div class="card card-section">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">Zero inventory</span>
+                <span class="badge bg-danger">{{ out_of_stock_items|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if out_of_stock_items %}
+                <div class="table-responsive">
+                    <table class="table dash-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Size</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in out_of_stock_items %}
+                            <tr>
+                                <td><strong>{{ item.product.name }}</strong></td>
+                                <td><small class="text-muted">{{ item.product.category.name }}</small></td>
+                                <td>{{ item.size }}</td>
+                                <td><span class="badge bg-danger">Out of Stock</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <p class="mb-0">No items are out of stock.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SECTION 4: Stock Replenishment ── -->
+<div class="section-title"><i class="fas fa-cart-plus me-2"></i>Stock Replenishment Needs</div>
+<div class="card card-section mb-5">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Items to reorder (target: 50 units per SKU)</span>
+        <span class="badge" style="background:#456273;">{{ replenishment_count }} SKUs</span>
+    </div>
+    <div class="card-body p-0">
+        {% if replenishment_data %}
+        <div class="table-responsive">
+            <table class="table dash-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Current Stock</th>
+                        <th>Units to Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in replenishment_data %}
+                    <tr>
+                        <td><strong>{{ item.product }}</strong></td>
+                        <td><small class="text-muted">{{ item.category }}</small></td>
+                        <td>{{ item.size }}</td>
+                        <td>
+                            <span class="fw-bold {% if item.current_qty == 0 %}text-danger{% else %}text-warning{% endif %}">
+                                {{ item.current_qty }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="replenish-badge">
+                                <i class="fas fa-plus me-1"></i>{{ item.needed }} units
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-warehouse text-success"></i>
+            <p class="mb-0">All stock levels are healthy. No replenishment needed.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

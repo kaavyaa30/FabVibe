@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmation</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #4CAF50;">Order Placed Successfully!</h1>
+        
+        <p>Hi {{ user.get_full_name|default:user.username }},</p>
+        
+        <p>Thank you for your order! We're excited to get your items to you.</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h2 style="margin-top: 0;">Order Details</h2>
+            <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+            <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
+            <p><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</p>
+            <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+        </div>
+        
+        <h3>Order Items</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+                <tr style="background-color: #f5f5f5;">
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
+                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Size</th>
+                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
+                    <th style="padding: 10px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ item.product.name }}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">{{ item.size }}</td>
+                    <td style="padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">{{ item.quantity }}</td>
+                    <td style="padding: 10px; text-align: right; border-bottom: 1px solid #ddd;">₹{{ item.price_at_purchase }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0;">Price Breakdown</h3>
+            <table style="width: 100%;">
+                <tr>
+                    <td>Subtotal:</td>
+                    <td style="text-align: right;">₹{{ order.subtotal }}</td>
+                </tr>
+                <tr>
+                    <td>Tax (18%):</td>
+                    <td style="text-align: right;">₹{{ order.tax }}</td>
+                </tr>
+                <tr>
+                    <td>Shipping:</td>
+                    <td style="text-align: right;">₹{{ order.shipping_charge }}</td>
+                </tr>
+                {% if order.discount %}
+                <tr>
+                    <td>Discount:</td>
+                    <td style="text-align: right; color: #4CAF50;">-₹{{ order.discount }}</td>
+                </tr>
+                {% endif %}
+                <tr style="font-weight: bold; font-size: 1.2em; border-top: 2px solid #ddd;">
+                    <td style="padding-top: 10px;">Total:</td>
+                    <td style="text-align: right; padding-top: 10px;">₹{{ order.total_amount }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div style="background-color: #e3f2fd; padding: 15px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0;">Shipping Address</h3>
+            <p style="white-space: pre-line; margin: 0;">{{ order.shipping_address }}</p>
+        </div>
+        
+        <p><strong>Estimated Delivery:</strong> 5-7 business days</p>
+        
+        <p>You can track your order status anytime by visiting your account dashboard.</p>
+        
+        <p>If you have any questions, please don't hesitate to contact us.</p>
+        
+        <p>Thank you for shopping with FabVibe!</p>
+        
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+        
+        <p style="font-size: 0.9em; color: #666;">
+            This is an automated email. Please do not reply to this message.
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Address - FabVibe{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width:480px;">
+
+  <div class="mb-4">
+    <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
+       class="text-decoration-none" style="color:#456273;">
+      &larr; {% if next == 'checkout' %}Back to Checkout{% else %}Back to Profile{% endif %}
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4 text-center">
+
+      <div class="mb-3">
+        <i class="fas fa-trash-alt fa-3x" style="color:#dc3545;"></i>
+      </div>
+
+      <h5 class="fw-bold mb-1" style="color:#456273;">Delete Address?</h5>
+      <p class="text-muted mb-4" style="font-size:.9rem;">This action cannot be undone.</p>
+
+      <div class="p-3 rounded text-start mb-4" style="background:#f8f9fa;border-left:4px solid #456273;">
+        <div class="fw-semibold" style="color:#456273;">{{ address.full_name }}</div>
+        <div class="text-muted small mt-1">
+          {{ address.address_line1 }}<br>
+          {% if address.address_line2 %}{{ address.address_line2 }}<br>{% endif %}
+          {{ address.city }}, {{ address.state }} {{ address.postal_code }}<br>
+          {{ address.country }}<br>
+          Phone: {{ address.phone_number }}
+        </div>
+        {% if address.is_default %}
+          <span class="badge mt-2" style="background:#456273;">Default</span>
+        {% endif %}
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="d-flex gap-2">
+          <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
+             class="btn btn-outline-secondary flex-fill">Cancel</a>
+          <button type="submit" class="btn btn-danger flex-fill">
+            <i class="fas fa-trash-alt me-1"></i> Delete
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

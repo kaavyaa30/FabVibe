@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout - Select Address - FabVibe{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Checkout</h2>
+    
+    <!-- Checkout Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>1</strong>
+                    </div>
+                    <div class="mt-2"><strong>Shipping Address</strong></div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #ddd;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>2</strong>
+                    </div>
+                    <div class="mt-2 text-muted">Order Summary</div>
+                </div>
+                <div class="flex-fill" style="height: 2px; background-color: #ddd;"></div>
+                <div class="text-center flex-fill">
+                    <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <strong>3</strong>
+                    </div>
+                    <div class="mt-2 text-muted">Payment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Address Selection -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Select Shipping Address</h5>
+                    {% if not show_add_form %}
+                        <a href="?add_new=true" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-plus"></i> Add New Address
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if addresses and not show_add_form %}
+                        <form method="post" id="selectAddressForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="select_address">
+                            
+                            {% for address in addresses %}
+                                <div class="border rounded p-3 mb-3 d-flex align-items-start gap-3">
+                                    <input class="form-check-input mt-1 flex-shrink-0" type="radio"
+                                           name="address_id" form="selectAddressForm"
+                                           id="address{{ address.id }}" value="{{ address.id }}"
+                                           {% if address.is_default %}checked{% endif %}>
+                                    <label class="form-check-label flex-grow-1" for="address{{ address.id }}" style="cursor:pointer;">
+                                        <strong>{{ address.full_name }}</strong>
+                                        {% if address.is_default %}
+                                            <span class="badge ms-2" style="background:#456273;font-size:.72rem;">Default</span>
+                                        {% endif %}
+                                        <div class="text-muted mt-1" style="font-size:.88rem;">
+                                            {{ address.address_line1 }}
+                                            {% if address.address_line2 %}<br>{{ address.address_line2 }}{% endif %}
+                                            <br>{{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                                            <br>{{ address.country }}
+                                            <br>Phone: {{ address.phone_number }}
+                                        </div>
+                                    </label>
+                                    <div class="d-flex flex-column gap-1 flex-shrink-0">
+                                        <a href="{% url 'users:edit_address' address.id %}?next=checkout"
+                                           class="btn btn-sm btn-outline-secondary" style="font-size:.78rem;white-space:nowrap;">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <a href="{% url 'users:delete_address' address.id %}?next=checkout"
+                                           class="btn btn-sm btn-outline-danger" style="font-size:.78rem;white-space:nowrap;">
+                                            <i class="fas fa-trash-alt"></i> Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'cart:cart_detail' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Cart
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    Proceed to Order Summary <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                    {% elif show_add_form %}
+                        <!-- Add New Address Form -->
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_address">
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.full_name.id_for_label }}" class="form-label">Full Name *</label>
+                                    {{ address_form.full_name }}
+                                    {% if address_form.full_name.errors %}
+                                        <div class="text-danger">{{ address_form.full_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.phone_number.id_for_label }}" class="form-label">Phone Number *</label>
+                                    {{ address_form.phone_number }}
+                                    {% if address_form.phone_number.errors %}
+                                        <div class="text-danger">{{ address_form.phone_number.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ address_form.address_line1.id_for_label }}" class="form-label">Address Line 1 *</label>
+                                {{ address_form.address_line1 }}
+                                {% if address_form.address_line1.errors %}
+                                    <div class="text-danger">{{ address_form.address_line1.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ address_form.address_line2.id_for_label }}" class="form-label">Address Line 2</label>
+                                {{ address_form.address_line2 }}
+                                {% if address_form.address_line2.errors %}
+                                    <div class="text-danger">{{ address_form.address_line2.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.city.id_for_label }}" class="form-label">City *</label>
+                                    {{ address_form.city }}
+                                    {% if address_form.city.errors %}
+                                        <div class="text-danger">{{ address_form.city.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.state.id_for_label }}" class="form-label">State *</label>
+                                    {{ address_form.state }}
+                                    {% if address_form.state.errors %}
+                                        <div class="text-danger">{{ address_form.state.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.postal_code.id_for_label }}" class="form-label">Postal Code *</label>
+                                    {{ address_form.postal_code }}
+                                    {% if address_form.postal_code.errors %}
+                                        <div class="text-danger">{{ address_form.postal_code.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ address_form.country.id_for_label }}" class="form-label">Country *</label>
+                                    {{ address_form.country }}
+                                    {% if address_form.country.errors %}
+                                        <div class="text-danger">{{ address_form.country.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                {{ address_form.is_default }}
+                                <label class="form-check-label" for="{{ address_form.is_default.id_for_label }}">
+                                    Set as default address
+                                </label>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'orders:checkout' %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Saved Addresses
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    Save & Continue <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <!-- No addresses saved -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> You don't have any saved addresses.
+                        </div>
+                        <a href="?add_new=true" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Shipping Address
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Summary Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Items ({{ cart_items.count }})</strong>
+                    </div>
+                    
+                    {% for item in cart_items %}
+                        <div class="d-flex mb-2">
+                            <div class="flex-grow-1">
+                                <small>{{ item.product.name }} ({{ item.size }})</small>
+                                <br>
+                                <small class="text-muted">Qty: {{ item.quantity }}</small>
+                            </div>
+                            <div>
+                                <small>₹{{ item.get_subtotal }}</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>Subtotal:</strong>
+                        <strong>₹{{ cart_total }}</strong>
+                    </div>
+                    
+                    {% if coupon_discount > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Discount ({{ coupon_code }}):</span>
+                        <span>-₹{{ coupon_discount }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <strong>Total:</strong>
+                        <strong>₹{{ final_total }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <small class="text-muted">
+                        Tax and shipping will be calculated in the next step
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

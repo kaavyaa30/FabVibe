@@ -1,0 +1,12 @@
+Django==4.2.7
+Pillow==10.1.0
+django-crispy-forms==2.1
+crispy-bootstrap4==2024.1
+python-decouple==3.8
+celery==5.3.4
+redis==5.0.1
+razorpay==1.4.1
+twilio==8.10.0
+reportlab==4.0.7
+django-filter==23.5
+requests==2.31.0

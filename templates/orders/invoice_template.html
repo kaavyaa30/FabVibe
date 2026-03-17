@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - {{ order.order_id }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .company-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .invoice-title {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .info-section {
+            margin: 20px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 20px;
+            float: right;
+            width: 300px;
+        }
+        .totals table {
+            margin: 0;
+        }
+        .totals td {
+            border: none;
+            padding: 5px 10px;
+        }
+        .total-row {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #333 !important;
+        }
+        .footer {
+            margin-top: 100px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">FabVibe</div>
+        <div>Fashion E-Commerce Platform</div>
+    </div>
+    
+    <div class="invoice-title">INVOICE</div>
+    
+    <div class="info-section">
+        <div><span class="info-label">Invoice Number:</span> {{ order.order_id }}</div>
+        <div><span class="info-label">Order Date:</span> {{ order.created_at|date:"F d, Y" }}</div>
+        <div><span class="info-label">Delivery Date:</span> {{ order.delivered_at|date:"F d, Y"|default:"Pending" }}</div>
+    </div>
+    
+    <div class="info-section">
+        <div style="font-weight: bold; margin-bottom: 10px;">Bill To:</div>
+        <div>{{ order.user.get_full_name|default:order.user.username }}</div>
+        <div>{{ order.user.email }}</div>
+    </div>
+    
+    <div class="info-section">
+        <div style="font-weight: bold; margin-bottom: 10px;">Shipping Address:</div>
+        <div style="white-space: pre-line;">{{ order.shipping_address }}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Size</th>
+                <th class="text-right">Quantity</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_items %}
+            <tr>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.size }}</td>
+                <td class="text-right">{{ item.quantity }}</td>
+                <td class="text-right">₹{{ item.price_at_purchase }}</td>
+                <td class="text-right">₹{% widthratio item.price_at_purchase 1 item.quantity %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="totals">
+        <table>
+            <tr>
+                <td>Subtotal:</td>
+                <td class="text-right">₹{{ order.subtotal }}</td>
+            </tr>
+            <tr>
+                <td>Tax (18%):</td>
+                <td class="text-right">₹{{ order.tax }}</td>
+            </tr>
+            <tr>
+                <td>Shipping:</td>
+                <td class="text-right">₹{{ order.shipping_charge }}</td>
+            </tr>
+            {% if order.discount %}
+            <tr>
+                <td>Discount:</td>
+                <td class="text-right" style="color: #4CAF50;">-₹{{ order.discount }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td>Total:</td>
+                <td class="text-right">₹{{ order.total_amount }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="clear: both;"></div>
+    
+    <div class="info-section" style="margin-top: 40px;">
+        <div><span class="info-label">Payment Method:</span> {{ order.get_payment_method_display }}</div>
+        <div><span class="info-label">Payment Status:</span> {{ order.get_payment_status_display }}</div>
+    </div>
+    
+    <div class="footer">
+        <p>Thank you for shopping with FabVibe!</p>
+        <p>For any queries, please contact us at support@fabvibe.com</p>
+    </div>
+</body>
+</html>

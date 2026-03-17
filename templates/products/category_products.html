@@ -1,0 +1,831 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}{{ category.name }} - FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Enhanced Breadcrumb Design */
+    .category-breadcrumb {
+        background: transparent;
+        border: none;
+        padding: 0.5rem 0;
+        margin-bottom: 1rem;
+    }
+    
+    .category-breadcrumb .breadcrumb {
+        margin: 0;
+        background: transparent;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+    }
+    
+    .category-breadcrumb .breadcrumb-item {
+        font-size: 1.3rem;
+        font-weight: 500;
+    }
+    
+    .category-breadcrumb .breadcrumb-item a {
+        color: #456273;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .category-breadcrumb .breadcrumb-item a:hover {
+        color: #4e6a7a;
+        transform: translateX(2px);
+    }
+    
+    .category-breadcrumb .breadcrumb-item.active {
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 1.3rem;
+    }
+    
+    .category-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        color: #95a5a6;
+        font-size: 1.2rem;
+        font-weight: 400;
+    }
+    
+    /* Enhanced Page Header */
+    .category-page-header {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .category-page-header::before,
+    .category-page-header::after {
+        display: none;
+    }
+    
+    .category-header-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .category-title {
+        color: #2c3e50;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .category-title-icon {
+        font-size: 1.25rem;
+        color: #456273;
+    }
+    
+    .category-description {
+        color: #5a6c7d;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    
+    .category-stats {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .category-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: #ffffff;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(74, 37, 69, 0.2);
+    }
+    
+    .category-stat-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(74, 37, 69, 0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        color: #456273;
+    }
+    
+    .category-stat-content {
+        color: #2c3e50;
+    }
+    
+    .category-stat-label {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        display: block;
+        margin-bottom: 0.15rem;
+    }
+    
+    .category-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        display: block;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .category-breadcrumb {
+            padding: 0.5rem 0;
+        }
+        
+        .category-page-header {
+            padding: 1.5rem;
+        }
+        
+        .category-title {
+            font-size: 1.1rem;
+        }
+        
+        .category-title-icon {
+            font-size: 1.1rem;
+        }
+        
+        .category-description {
+            font-size: 1rem;
+        }
+        
+        .category-stats {
+            gap: 1rem;
+        }
+        
+        .category-stat-item {
+            padding: 0.6rem 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="category-breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'products:home' %}">Home</a>
+            </li>
+            {% if category.parent %}
+            <li class="breadcrumb-item">
+                <a href="{% url 'products:category_products' category.parent.slug %}">{{ category.parent.name }}</a>
+            </li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">{{ category.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Single Merged Category Info Card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+
+                <!-- Left: Shop by Category links -->
+                <div>
+                    {% if not category.parent %}
+                    {% with subcategories=category.subcategories.all %}
+                    {% if subcategories %}
+                    <div>
+                        <h5 class="mb-3 fw-semibold"><i class="fas fa-th-large me-2 text-secondary"></i>Shop by Category</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for subcategory in subcategories %}
+                            {% if subcategory.is_active %}
+                            <a href="{% url 'products:category_products' subcategory.slug %}"
+                               class="btn btn-outline-primary">
+                                {{ subcategory.name }}
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </div>
+
+                <!-- Right: Category name above stats -->
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <h5 class="fw-semibold mb-1">
+                        <i class="fas fa-shopping-bag me-2 text-secondary"></i>{{ category.name }}
+                    </h5>
+                    <div class="d-flex gap-3">
+                        <div class="text-center px-3 py-2 rounded border">
+                            <div class="small text-muted">Products</div>
+                            <div class="fw-bold fs-5">{{ page_obj.paginator.count }}</div>
+                        </div>
+                        {% if not category.parent and category.subcategories.all %}
+                        <div class="text-center px-3 py-2 rounded border">
+                            <div class="small text-muted">Subcategories</div>
+                            <div class="fw-bold fs-5">{{ category.subcategories.count }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="filters-sidebar">
+                <div class="card border-0 shadow-sm sticky-top" style="top: 100px;">
+                    <div class="card-header bg-custom-primary text-white py-3">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+                    </div>
+                    <div class="card-body p-4">
+                    <form method="get" id="filterForm">
+                        <!-- Price Range Filter -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-rupee-sign me-2"></i>Price Range</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="number" name="min_price" class="form-control" 
+                                           placeholder="Min" value="{{ min_price }}" min="0" step="0.01">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" name="max_price" class="form-control" 
+                                           placeholder="Max" value="{{ max_price }}" min="0" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Size Filter -->
+                        {% if available_sizes %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-ruler me-2"></i>Size</h6>
+                            <div class="filter-options">
+                                {% for size in available_sizes %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="size" 
+                                           value="{{ size }}" id="size_{{ size }}"
+                                           {% if size in selected_sizes %}checked{% endif %}>
+                                    <label class="form-check-label" for="size_{{ size }}">
+                                        {{ size }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Color Filter -->
+                        {% if available_colors %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-palette me-2"></i>Color</h6>
+                            <div class="filter-options">
+                                {% for color in available_colors %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="color" 
+                                           value="{{ color }}" id="color_{{ color|slugify }}"
+                                           {% if color in selected_colors %}checked{% endif %}>
+                                    <label class="form-check-label" for="color_{{ color|slugify }}">
+                                        {{ color }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Brand Filter -->
+                        {% if available_brands %}
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3"><i class="fas fa-tag me-2"></i>Brand</h6>
+                            <div class="filter-options">
+                                {% for brand in available_brands %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="brand" 
+                                           value="{{ brand }}" id="brand_{{ brand|slugify }}"
+                                           {% if brand in selected_brands %}checked{% endif %}>
+                                    <label class="form-check-label" for="brand_{{ brand|slugify }}">
+                                        {{ brand }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Filter Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-check me-2"></i>Apply Filters
+                            </button>
+                            <a href="{% url 'products:category_products' category.slug %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-redo me-2"></i>Clear All
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="col-lg-9">
+            <!-- Sorting and Product Count -->
+            <div class="products-toolbar mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <p class="mb-0 text-muted">
+                                    <strong>Showing {{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> products
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <form method="get" class="d-flex justify-content-md-end align-items-center">
+                                    <!-- Preserve filters in sort form -->
+                                    {% if min_price %}<input type="hidden" name="min_price" value="{{ min_price }}">{% endif %}
+                                    {% if max_price %}<input type="hidden" name="max_price" value="{{ max_price }}">{% endif %}
+                                    {% for size in selected_sizes %}<input type="hidden" name="size" value="{{ size }}">{% endfor %}
+                                    {% for color in selected_colors %}<input type="hidden" name="color" value="{{ color }}">{% endfor %}
+                                    {% for brand in selected_brands %}<input type="hidden" name="brand" value="{{ brand }}">{% endfor %}
+                                    
+                                    <label class="me-2 mb-0 text-muted"><i class="fas fa-sort me-1"></i>Sort by:</label>
+                                    <select name="sort" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                                        <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                                        <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            {% if products %}
+            <!-- DEBUG: Found {{ products|length }} products -->
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 mb-4">
+                {% for product in products %}
+                <div class="col">
+                    <div class="card h-100 product-card position-relative border-0 shadow-sm">
+                        <button class="wishlist-btn-card" onclick="toggleWishlist({{ product.id }}, this)" title="Add to wishlist">
+                            <i class="{% if product.id in user_wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                        </button>
+                        <a href="{% url 'products:product_detail' product.slug %}" class="text-decoration-none">
+                            {% if product.images.all %}
+                            <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                            {% else %}
+                            <img src="https://via.placeholder.com/320x320?text=No+Image" class="card-img-top" alt="{{ product.name }}">
+                            {% endif %}
+                        </a>
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title flex-grow-1 mb-2">
+                                <a href="{% url 'products:product_detail' product.slug %}" class="text-decoration-none">
+                                    {{ product.name }}
+                                </a>
+                            </h6>
+                            {% if product.brand %}
+                            <p class="card-text text-muted small mb-2">{{ product.brand }}</p>
+                            {% endif %}
+                            <p class="product-price mb-2">{{ product.price|inr }}</p>
+                            <div class="mt-auto">
+                                {% if not product.is_in_stock %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.is_low_stock %}
+                                <span class="badge bg-warning text-dark">Low Stock</span>
+                                {% else %}
+                                <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-white border-0 p-3">
+                            <a href="{% url 'products:product_detail' product.slug %}" 
+                               class="btn btn-primary w-100">
+                                <i class="fas fa-eye me-2"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Product pagination" class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if query_string %}&{{ query_string }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;&laquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo;</span>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link">&raquo;&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <!-- No Products -->
+            <div class="no-products-found text-center py-5">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-5">
+                        <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                        <h3 class="mb-3">No products found</h3>
+                        <p class="text-muted mb-4">We couldn't find any products matching your criteria. Try adjusting your filters or browse other categories.</p>
+                        <a href="{% url 'products:category_products' category.slug %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-redo me-2"></i>Clear Filters
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Category Page Specific Styles */
+.bg-custom-primary {
+    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%) !important;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
+    border: none;
+    color: white !important;
+}
+.btn-primary:hover {
+    background: linear-gradient(135deg, #3d5a6b 0%, #2c4a5a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(69, 98, 115, 0.4);
+}
+.btn-outline-primary {
+    color: #2c3e50;
+    border-color: #456273;
+}
+.btn-outline-primary:hover {
+    color: white !important;
+    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
+    border-color: #456273;
+}
+.subcategories-section .btn-outline-primary {
+    border-width: 2px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.subcategories-section .btn-outline-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 37, 69, 0.3);
+}
+
+/* Ensure proper row layout */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -0.75rem;
+    margin-left: -0.75rem;
+}
+
+.col-lg-3,
+.col-lg-9 {
+    position: relative;
+    width: 100%;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+}
+
+@media (min-width: 992px) {
+    .col-lg-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+    
+    .col-lg-9 {
+        flex: 0 0 75%;
+        max-width: 75%;
+    }
+}
+
+.filters-sidebar {
+    position: relative;
+}
+
+.filters-sidebar .card {
+    border-radius: 16px;
+    border: 1px solid #e0e0e0;
+}
+
+.filters-sidebar .card-header {
+    border-radius: 16px 16px 0 0 !important;
+    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%) !important;
+}
+
+.filter-options {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.filter-options::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-options::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.filter-options::-webkit-scrollbar-thumb {
+    background: #456273;
+    border-radius: 3px;
+}
+
+.filter-options::-webkit-scrollbar-thumb:hover {
+    background: #4e6a7a;
+}
+
+.form-check-input:checked {
+    background-color: #456273;
+    border-color: #456273;
+}
+
+.products-toolbar {
+    position: relative;
+    z-index: 1;
+}
+
+.products-toolbar .card {
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.product-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+    background: white;
+    border: 1px solid #e0e0e0;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(74, 37, 69, 0.15) !important;
+    border-color: rgba(74, 37, 69, 0.5);
+}
+
+.product-card img {
+    height: 280px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+    background: #f8f9fa;
+}
+
+.product-card:hover img {
+    transform: scale(1.03);
+}
+
+.product-card .card-footer {
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.wishlist-btn-card {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 10;
+    background-color: #2c3e50;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.wishlist-btn-card:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    background-color: #ef4444;
+}
+
+.wishlist-btn-card:hover i {
+    color: white !important;
+}
+
+.wishlist-btn-card i {
+    font-size: 20px;
+    color: #ef4444;
+    transition: all 0.3s ease;
+}
+
+.no-products-found .card {
+    border-radius: 16px;
+    border: 1px solid #e0e0e0;
+}
+
+.pagination {
+    gap: 8px;
+}
+
+.page-link {
+    border: 2px solid #e0e0e0;
+    color: #456273;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.page-link:hover {
+    background-color: #456273;
+    border-color: #456273;
+    color: #2c3e50;
+    transform: translateY(-2px);
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
+    border-color: #456273;
+    box-shadow: 0 4px 12px rgba(69, 98, 115, 0.3);
+}
+
+.page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    border-color: #e0e0e0;
+    color: #7f8c8d;
+}
+
+/* Ensure products section is visible and positioned correctly */
+.col-lg-9 {
+    position: relative;
+    min-height: 400px;
+    display: block;
+}
+
+/* Page Header Styling */
+.page-header {
+    background: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.page-header .lead {
+    font-size: 1.125rem;
+    color: #7f8c8d;
+}
+
+/* Breadcrumb Styling */
+.breadcrumb {
+    background-color: #2c3e50;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.breadcrumb-item a {
+    color: #456273;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.breadcrumb-item a:hover {
+    color: #4e6a7a;
+}
+
+.breadcrumb-item.active {
+    color: #7f8c8d;
+}
+
+/* Subcategories Section */
+.subcategories-section .card {
+    border: 1px solid #e0e0e0;
+    border-radius: 16px;
+}
+
+.subcategories-section .card-body {
+    padding: 2rem;
+}
+
+.subcategories-section h5 {
+    color: #2c3e50;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCsrf() {
+    const v = document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)');
+    return v ? v[2] : '';
+}
+
+function toggleWishlist(productId, btn) {
+    const icon = btn.querySelector('i');
+    const inWishlist = icon.classList.contains('fas');
+    const url = inWishlist
+        ? `/wishlist/remove/${productId}/`
+        : `/wishlist/add/${productId}/`;
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        credentials: 'same-origin',
+    })
+    .then(r => {
+        if (r.status === 401) {
+            window.location.href = '/users/login/?next=' + window.location.pathname;
+            return null;
+        }
+        return r.json();
+    })
+    .then(data => {
+        if (!data) return;
+        if (data.success) {
+            if (inWishlist) {
+                icon.classList.replace('fas', 'far');
+                btn.style.backgroundColor = '#2c3e50';
+            } else {
+                icon.classList.replace('far', 'fas');
+                btn.style.backgroundColor = '#ef4444';
+            }
+        }
+    })
+    .catch(err => console.error('Wishlist error:', err));
+}
+</script>
+{% endblock %}

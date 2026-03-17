@@ -1,0 +1,845 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}{{ product.name }} - FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Product Image Gallery */
+    .product-image-gallery {
+        position: relative;
+    }
+    
+    .main-image-container {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: zoom-in;
+        height: 500px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+    }
+    
+    .main-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+    
+    .main-image-container.zoomed {
+        cursor: zoom-out;
+    }
+    
+    .main-image-container.zoomed .main-image {
+        transform: scale(2);
+    }
+    
+    .thumbnail-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+        overflow-x: auto;
+        padding: 5px 0;
+    }
+    
+    .thumbnail {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: border-color 0.3s ease;
+        flex-shrink: 0;
+    }
+    
+    .thumbnail:hover,
+    .thumbnail.active {
+        border-color: #456273;
+    }
+    
+    /* Product Info */
+    .product-price {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 20px 0;
+    }
+    
+    .product-description {
+        line-height: 1.8;
+        color: #5a6c7d;
+    }
+    
+    /* Size Selection */
+    .size-selector {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 20px 0;
+    }
+    
+    .size-option {
+        padding: 10px 20px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+    
+    .size-option:hover {
+        border-color: #456273;
+    }
+    
+    .size-option.selected {
+        border-color: #456273;
+        background-color: #456273;
+        color: white;
+    }
+
+    /* Size required hint */
+    .size-required-hint {
+        font-size: 0.82rem;
+        color: #e74c3c;
+        margin-top: 6px;
+        display: none;
+    }
+    .size-required-hint.visible {
+        display: block;
+    }
+
+    /* Add to Cart / Go to Cart button states */
+    #addToCartBtn.state-in-cart {
+        background: #28a745 !important;
+        border-color: #28a745 !important;
+        color: #fff !important;
+    }
+    
+    /* Reviews */
+    .review-card {
+        border-left: 3px solid #456273;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+    }
+    
+    .star-rating {
+        color: #ffc107;
+    }
+    
+    /* Similar Products */
+    .similar-product-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .similar-product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .similar-product-card img {
+        height: 200px;
+        object-fit: cover;
+    }
+    
+    /* Quantity Selector */
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .quantity-btn {
+        width: 35px;
+        height: 35px;
+        border: 1px solid #ddd;
+        background-color: white;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 18px;
+    }
+    
+    .quantity-btn:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .quantity-input {
+        width: 60px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%       { transform: translateX(-6px); }
+        40%       { transform: translateX(6px); }
+        60%       { transform: translateX(-4px); }
+        80%       { transform: translateX(4px); }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb bg-white px-3 py-2 rounded-3 shadow-sm">
+            <li class="breadcrumb-item"><a href="{% url 'products:home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'products:category_products' product.category.slug %}">{{ product.category.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Product Images -->
+        <div class="col-lg-6">
+            <div class="product-image-gallery sticky-top" style="top: 100px;">
+                <!-- Main Image -->
+                <div class="main-image-container" id="mainImageContainer">
+                    {% if product_images %}
+                        <img src="{{ product_images.0.image.url }}" alt="{{ product.name }}" class="main-image" id="mainImage">
+                    {% else %}
+                        <img src="https://via.placeholder.com/500x500?text=No+Image" alt="{{ product.name }}" class="main-image" id="mainImage">
+                    {% endif %}
+                </div>
+                
+                <!-- Thumbnail Images -->
+                {% if product_images %}
+                <div class="thumbnail-container">
+                    {% for image in product_images %}
+                    <img src="{{ image.image.url }}" 
+                         alt="{{ product.name }}" 
+                         class="thumbnail {% if forloop.first %}active{% endif %}" 
+                         onclick="changeMainImage('{{ image.image.url }}', this)">
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Product Information -->
+        <div class="col-lg-6">
+            <div class="product-info-section">
+                <h1 class="mb-3 fw-bold">{{ product.name }}</h1>
+            
+            {% if product.brand %}
+            <p class="text-muted mb-2">
+                <strong>Brand:</strong> {{ product.brand }}
+            </p>
+            {% endif %}
+            
+            <!-- Rating -->
+            <div class="mb-3" id="productRatingDisplay">
+                <span class="star-rating" id="avgStars">
+                    {% for i in "12345" %}
+                        <i class="{% if forloop.counter <= average_rating %}fas{% else %}far{% endif %} fa-star"></i>
+                    {% endfor %}
+                </span>
+                <span class="text-muted ms-2">
+                    <span id="avgRatingVal">{% if average_rating %}{{ average_rating|floatformat:1 }}{% endif %}</span>
+                    (<span id="reviewCountVal">{{ review_count }}</span> review{{ review_count|pluralize }})
+                </span>
+            </div>
+            
+            <!-- Price -->
+            <div class="product-price">{{ product.price|inr }}</div>
+            
+            <!-- Stock Status -->
+            <div class="mb-3">
+                {% if product.is_in_stock %}
+                    <span class="badge bg-success">In Stock</span>
+                {% else %}
+                    <span class="badge bg-danger">Out of Stock</span>
+                {% endif %}
+            </div>
+            
+            <!-- Description -->
+            <div class="product-description mb-4">
+                <h5>Description</h5>
+                <p>{{ product.description }}</p>
+            </div>
+            
+            <!-- Available Sizes -->
+            {% if available_sizes %}
+            <div class="mb-4">
+                <h5>Available Sizes 
+                    <a href="#" class="text-primary ms-2" data-bs-toggle="modal" data-bs-target="#sizeChartModal">
+                        <small><i class="fas fa-ruler"></i> Size Chart</small>
+                    </a>
+                </h5>
+                <div class="size-selector">
+                    {% for size in available_sizes %}
+                    <button class="size-option" onclick="selectSize(this, '{{ size }}')">{{ size }}</button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" id="selectedSize" name="size" value="">
+                <div class="size-required-hint" id="sizeHint">
+                    <i class="fas fa-exclamation-circle me-1"></i>Please select a size to continue
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Material Details -->
+            {% if product.material %}
+            <div class="mb-4">
+                <h5>Material</h5>
+                <p>{{ product.material }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Care Instructions -->
+            {% if product.care_instructions %}
+            <div class="mb-4">
+                <h5>Care Instructions</h5>
+                <p>{{ product.care_instructions }}</p>
+            </div>
+            {% endif %}
+            
+            <!-- Quantity and Add to Cart -->
+            {% if product.is_in_stock %}
+            <div class="mb-4">
+                <h5>Quantity</h5>
+                <div class="quantity-selector">
+                    <button class="quantity-btn" onclick="decreaseQuantity()">-</button>
+                    <input type="number" id="quantity" class="quantity-input" value="1" min="1" max="{{ product.inventory }}" readonly>
+                    <button class="quantity-btn" onclick="increaseQuantity()">+</button>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-3 mb-4">
+                <button class="btn btn-primary btn-lg flex-grow-1" onclick="addToCart()" id="addToCartBtn">
+                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                {% if user.is_authenticated %}
+                <button class="btn btn-outline-danger btn-lg" onclick="toggleWishlist()" id="wishlistBtn">
+                    <i class="{% if in_wishlist %}fas{% else %}far{% endif %} fa-heart"></i>
+                </button>
+                {% endif %}
+            </div>
+            <!-- AR Try-On Button -->
+            <button class="btn btn-lg w-100 mb-3" id="tryOnBtn"
+                onclick="openTryOn(
+                    [{% for img in product_images %}'{{ img.image.url }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                    '{{ product.name|escapejs }}',
+                    '{{ product.category.name|lower|escapejs }}'
+                )"
+                style="background:#456273; color:#fff; border:none; border-radius:10px;">
+                <i class="fas fa-camera me-2"></i> AR Virtual Try-On
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Customer Reviews Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Customer Reviews</h3>
+
+            <!-- Review submission form (logged-in users only) -->
+            {% if user.is_authenticated %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">Write a Review</h5>
+
+                    <!-- Star picker -->
+                    <div class="mb-3" id="starPicker">
+                        {% for i in "12345" %}
+                        <i class="far fa-star review-star" data-value="{{ forloop.counter }}"
+                           style="font-size:1.6rem;color:#ffc107;cursor:pointer;margin-right:4px;"></i>
+                        {% endfor %}
+                        <input type="hidden" id="reviewRating" value="0">
+                        <small class="text-muted ms-2" id="ratingLabel">Select a rating</small>
+                    </div>
+
+                    <textarea id="reviewComment" class="form-control mb-3" rows="3"
+                              placeholder="Share your experience with this product..."></textarea>
+
+                    <button class="btn btn-primary px-4" onclick="submitReview()">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Review
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reviews list -->
+            <div id="reviewsList">
+                {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="review-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>{{ review.user.get_full_name|default:review.user.email }}</strong>
+                                <div class="star-rating">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= review.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ review.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <p class="mb-0">{{ review.comment }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted" id="noReviewsMsg">No reviews yet. Be the first to review this product!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Similar Products Section -->
+    {% if similar_products %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Similar Products</h3>
+            <div class="row g-4">
+                {% for similar_product in similar_products %}
+                <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                    <div class="card similar-product-card h-100">
+                        <a href="{% url 'products:product_detail' similar_product.slug %}">
+                            {% if similar_product.images.all %}
+                                <img src="{{ similar_product.images.first.image.url }}" class="card-img-top" alt="{{ similar_product.name }}">
+                            {% else %}
+                                <img src="https://via.placeholder.com/200x200?text=No+Image" class="card-img-top" alt="{{ similar_product.name }}">
+                            {% endif %}
+                        </a>
+                        <div class="card-body p-2">
+                            <h6 class="card-title small">
+                                <a href="{% url 'products:product_detail' similar_product.slug %}" class="text-decoration-none">
+                                    {{ similar_product.name|truncatewords:3 }}
+                                </a>
+                            </h6>
+                            <p class="mb-0 product-price fw-bold">{{ similar_product.price|inr }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Size Chart Modal -->
+<div class="modal fade" id="sizeChartModal" tabindex="-1" aria-labelledby="sizeChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sizeChartModalLabel">Size Chart</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Size</th>
+                            <th>Chest (inches)</th>
+                            <th>Waist (inches)</th>
+                            <th>Hips (inches)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>XS</td>
+                            <td>32-34</td>
+                            <td>24-26</td>
+                            <td>34-36</td>
+                        </tr>
+                        <tr>
+                            <td>S</td>
+                            <td>34-36</td>
+                            <td>26-28</td>
+                            <td>36-38</td>
+                        </tr>
+                        <tr>
+                            <td>M</td>
+                            <td>36-38</td>
+                            <td>28-30</td>
+                            <td>38-40</td>
+                        </tr>
+                        <tr>
+                            <td>L</td>
+                            <td>38-40</td>
+                            <td>30-32</td>
+                            <td>40-42</td>
+                        </tr>
+                        <tr>
+                            <td>XL</td>
+                            <td>40-42</td>
+                            <td>32-34</td>
+                            <td>42-44</td>
+                        </tr>
+                        <tr>
+                            <td>XXL</td>
+                            <td>42-44</td>
+                            <td>34-36</td>
+                            <td>44-46</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedSize = '';
+    let isZoomed = false;
+    
+    // Change main image when thumbnail is clicked
+    function changeMainImage(imageUrl, thumbnail) {
+        document.getElementById('mainImage').src = imageUrl;
+        
+        // Update active thumbnail
+        document.querySelectorAll('.thumbnail').forEach(thumb => {
+            thumb.classList.remove('active');
+        });
+        thumbnail.classList.add('active');
+        
+        // Reset zoom
+        isZoomed = false;
+        document.getElementById('mainImageContainer').classList.remove('zoomed');
+    }
+    
+    // Image zoom functionality
+    document.getElementById('mainImageContainer').addEventListener('click', function() {
+        isZoomed = !isZoomed;
+        this.classList.toggle('zoomed');
+    });
+    
+    // Size selection
+    function selectSize(button, size) {
+        document.querySelectorAll('.size-option').forEach(option => option.classList.remove('selected'));
+        button.classList.add('selected');
+        selectedSize = size;
+        document.getElementById('selectedSize').value = size;
+        // Hide hint once a size is chosen
+        const hint = document.getElementById('sizeHint');
+        if (hint) hint.classList.remove('visible');
+    }
+    
+    // Quantity controls
+    function increaseQuantity() {
+        const quantityInput = document.getElementById('quantity');
+        const currentValue = parseInt(quantityInput.value);
+        const maxValue = parseInt(quantityInput.max);
+        
+        if (currentValue < maxValue) {
+            quantityInput.value = currentValue + 1;
+        }
+    }
+    
+    function decreaseQuantity() {
+        const quantityInput = document.getElementById('quantity');
+        const currentValue = parseInt(quantityInput.value);
+        const minValue = parseInt(quantityInput.min);
+        
+        if (currentValue > minValue) {
+            quantityInput.value = currentValue - 1;
+        }
+    }
+    
+    // Add to cart
+    function addToCart() {
+        const btn = document.getElementById('addToCartBtn');
+
+        // "Go to Cart" state — redirect immediately
+        if (btn.dataset.state === 'in-cart') {
+            window.location.href = '{% url "cart:cart_detail" %}';
+            return;
+        }
+
+        const quantity = parseInt(document.getElementById('quantity')?.value || 1);
+        const size = document.getElementById('selectedSize')?.value || '';
+
+        {% if available_sizes %}
+        if (!size) {
+            const hint = document.getElementById('sizeHint');
+            if (hint) hint.classList.add('visible');
+            // Shake the size selector to draw attention
+            const selector = document.querySelector('.size-selector');
+            if (selector) {
+                selector.style.animation = 'none';
+                selector.offsetHeight; // reflow
+                selector.style.animation = 'shake 0.4s ease';
+            }
+            return;
+        }
+        {% endif %}
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Adding...';
+
+        function getCookie(name) {
+            const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            return v ? v[2] : '';
+        }
+
+        fetch('{% url "cart:add_to_cart" product.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                quantity: quantity,
+                size: size || '{% if not available_sizes %}One Size{% endif %}'
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Added to cart!', 'success');
+                btn.disabled = false;
+                btn.dataset.state = 'in-cart';
+                btn.classList.add('state-in-cart');
+                btn.innerHTML = '<i class="fas fa-shopping-bag me-1"></i> Go to Cart';
+                // Update navbar cart badge
+                const badge = document.querySelector('.cart-count, .navbar .badge');
+                if (badge && data.cart_count !== undefined) badge.textContent = data.cart_count;
+            } else {
+                showToast(data.error || 'Failed to add to cart', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Add to Cart';
+            }
+        })
+        .catch(err => {
+            console.error('Add to cart error:', err);
+            showToast('An error occurred. Please try again.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i> Add to Cart';
+        });
+    }
+    
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = 'min-width: 250px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+        toast.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 150);
+        }, 3000);
+    }
+    
+    // ── Rating display helpers ────────────────────────────────
+    function updateRatingDisplay(avg, count) {
+        const stars = document.querySelectorAll('#avgStars i');
+        stars.forEach((star, i) => {
+            const filled = i + 1 <= Math.round(avg);
+            star.className = filled ? 'fas fa-star' : 'far fa-star';
+        });
+        const valEl = document.getElementById('avgRatingVal');
+        const countEl = document.getElementById('reviewCountVal');
+        if (valEl) valEl.textContent = avg > 0 ? avg.toFixed(1) : '';
+        if (countEl) {
+            countEl.textContent = count;
+            // update "review/reviews" pluralization
+            const parent = countEl.parentElement;
+            if (parent) {
+                parent.lastChild.textContent = count === 1 ? ' review)' : ' reviews)';
+            }
+        }
+    }
+
+    // ── Star picker ──────────────────────────────────────────
+    document.querySelectorAll('.review-star').forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const val = parseInt(this.dataset.value);
+            document.querySelectorAll('.review-star').forEach((s, i) => {
+                s.classList.toggle('fas', i < val);
+                s.classList.toggle('far', i >= val);
+            });
+        });
+        star.addEventListener('mouseout', function() {
+            const selected = parseInt(document.getElementById('reviewRating').value);
+            document.querySelectorAll('.review-star').forEach((s, i) => {
+                s.classList.toggle('fas', i < selected);
+                s.classList.toggle('far', i >= selected);
+            });
+        });
+        star.addEventListener('click', function() {
+            const val = parseInt(this.dataset.value);
+            document.getElementById('reviewRating').value = val;
+            document.getElementById('ratingLabel').textContent = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][val];
+        });
+    });
+
+    // ── Submit review ─────────────────────────────────────────
+    function submitReview() {
+        const rating = parseInt(document.getElementById('reviewRating').value);
+        const comment = document.getElementById('reviewComment').value.trim();
+
+        if (!rating) { showToast('Please select a star rating', 'warning'); return; }
+        if (!comment) { showToast('Please write a review comment', 'warning'); return; }
+
+        fetch('{% url "products:submit_review" product.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)') || [])[2] || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ rating, comment })
+        })
+        .then(r => {
+            if (r.status === 401) {
+                window.location.href = '/users/login/?next=' + window.location.pathname;
+                return null;
+            }
+            return r.json();
+        })
+        .then(data => {
+            if (!data) return;
+            if (data.success) {
+                showToast(data.created ? 'Review submitted!' : 'Review updated!', 'success');
+
+                // Remove "no reviews" placeholder
+                const noMsg = document.getElementById('noReviewsMsg');
+                if (noMsg) noMsg.remove();
+
+                // Prepend new review card
+                const stars = Array.from({length: 5}, (_, i) =>
+                    `<i class="${i < data.review.rating ? 'fas' : 'far'} fa-star"></i>`
+                ).join('');
+
+                const card = document.createElement('div');
+                card.className = 'review-card';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <strong>${data.review.user}</strong>
+                            <div class="star-rating">${stars}</div>
+                        </div>
+                        <small class="text-muted">${data.review.date}</small>
+                    </div>
+                    <p class="mb-0">${data.review.comment}</p>`;
+
+                document.getElementById('reviewsList').prepend(card);
+
+                // Reset form
+                document.getElementById('reviewComment').value = '';
+                document.getElementById('reviewRating').value = '0';
+                document.getElementById('ratingLabel').textContent = 'Select a rating';
+                document.querySelectorAll('.review-star').forEach(s => {
+                    s.classList.replace('fas', 'far');
+                });
+
+                // Refresh average rating display
+                fetch('{% url "products:get_product_reviews" product.id %}')
+                    .then(r => r.json())
+                    .then(d => updateRatingDisplay(d.average_rating, d.review_count));
+            } else {
+                showToast(data.error || 'Failed to submit review', 'danger');
+            }
+        })
+        .catch(() => showToast('An error occurred. Please try again.', 'danger'));
+    }
+
+    // Toggle wishlist
+    function toggleWishlist() {
+        const productId = {{ product.id }};
+        const wishlistBtn = document.getElementById('wishlistBtn');
+        const icon = wishlistBtn.querySelector('i');
+        
+        const isInWishlist = icon.classList.contains('fas');
+        const url = isInWishlist ? 
+            '{% url "products:remove_from_wishlist" product.id %}' : 
+            '{% url "products:add_to_wishlist" product.id %}';
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        const csrftoken = getCookie('csrftoken');
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => {
+            if (response.status === 401) {
+                window.location.href = '/users/login/?next=' + window.location.pathname;
+                return null;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data) return;
+            if (data.success) {
+                if (data.in_wishlist) {
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    showToast('Added to wishlist!', 'success');
+                } else {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    showToast('Removed from wishlist', 'info');
+                }
+            } else {
+                showToast(data.message || 'Failed to update wishlist', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', 'danger');
+        });
+    }
+</script>
+
+<!-- AR Try-On: TF.js core + MediaPipe models (most reliable browser stack) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.2.0/dist/tf-core.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.2.0/dist/tf-backend-webgl.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+<script src="{% static 'js/ar-tryon.js' %}"></script>
+{% endblock %}
