@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db import models
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth import get_user
 from .models import Banner, Category, Product
 
@@ -142,16 +143,20 @@ def category_products(request, category_slug):
         user_wishlist_ids = list(Wishlist.objects.filter(user=request.user).values_list('product_id', flat=True))
     
     # Pagination - 12 products per page
+    from .models import ProductImage
+    products = products.prefetch_related(
+        models.Prefetch('images', queryset=ProductImage.objects.order_by('-is_primary', 'created_at'))
+    )
     paginator = Paginator(products, 12)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
-    
+
     # Build query string for pagination (preserve filters)
     query_params = request.GET.copy()
     if 'page' in query_params:
         query_params.pop('page')
     query_string = query_params.urlencode()
-    
+
     context = {
         'category': category,
         'products': page_obj,
@@ -458,74 +463,6 @@ def dashboard(request):
     return render(request, 'products/dashboard.html', context)
 
 
-def remove_background(request):
-    """Proxy view: calls remove.bg API and returns PNG with transparent background.
-    Accepts either an uploaded file (image_file) or a local path (image_url).
-    Sends raw image bytes to remove.bg so localhost URLs work fine.
-    """
-    import requests as req
-    import base64
-    import os
-    from django.conf import settings
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-
-    api_key = settings.REMOVEBG_API_KEY
-
-    # Try to get raw image bytes — prefer uploaded file, fall back to local path
-    image_bytes = None
-
-    if request.FILES.get('image_file'):
-        image_bytes = request.FILES['image_file'].read()
-    else:
-        image_url = request.POST.get('image_url', '')
-        if not image_url:
-            return JsonResponse({'error': 'No image provided'}, status=400)
-
-        # Convert URL to local filesystem path
-        # e.g. http://localhost:8000/media/products/foo.jpg → MEDIA_ROOT/products/foo.jpg
-        from urllib.parse import urlparse
-        parsed = urlparse(image_url)
-        url_path = parsed.path  # e.g. /media/products/foo.jpg
-
-        # Strip MEDIA_URL prefix to get relative path inside MEDIA_ROOT
-        media_url = settings.MEDIA_URL  # e.g. '/media/'
-        if url_path.startswith(media_url):
-            rel_path = url_path[len(media_url):]
-            local_path = os.path.join(settings.MEDIA_ROOT, rel_path)
-            if os.path.exists(local_path):
-                with open(local_path, 'rb') as f:
-                    image_bytes = f.read()
-
-        # If still no bytes (e.g. static file or external URL), fetch via requests
-        if image_bytes is None:
-            try:
-                r = req.get(image_url, timeout=15)
-                if r.status_code == 200:
-                    image_bytes = r.content
-            except Exception:
-                pass
-
-    if not image_bytes:
-        return JsonResponse({'error': 'Could not load image'}, status=400)
-
-    try:
-        response = req.post(
-            'https://api.remove.bg/v1.0/removebg',
-            files={'image_file': ('image.png', image_bytes)},
-            data={'size': 'auto'},
-            headers={'X-Api-Key': api_key},
-            timeout=30
-        )
-        if response.status_code == 200:
-            img_b64 = base64.b64encode(response.content).decode('utf-8')
-            return JsonResponse({'success': True, 'image': f'data:image/png;base64,{img_b64}'})
-        else:
-            error_detail = response.text[:200] if response.text else str(response.status_code)
-            return JsonResponse({'success': False, 'error': f'remove.bg: {error_detail}'}, status=200)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=200)
 
 
 
@@ -597,3 +534,495 @@ def get_product_reviews(request, product_id):
         ]
     }
     return JsonResponse(data)
+
+
+
+
+
+
+
+
+# ── Size Recommender ──────────────────────────────────────────────────────────
+
+@require_http_methods(["GET", "POST"])
+@login_required
+def size_recommender(request):
+    from .models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        import json
+        data = json.loads(request.body)
+        for field in ('height_cm', 'weight_kg', 'chest_cm', 'waist_cm', 'hips_cm'):
+            val = data.get(field)
+            setattr(profile, field, int(val) if val else None)
+        profile.save()
+        return JsonResponse({'success': True, 'recommended_size': profile.recommended_size()})
+
+    return JsonResponse({
+        'height_cm': profile.height_cm,
+        'weight_kg': profile.weight_kg,
+        'chest_cm':  profile.chest_cm,
+        'waist_cm':  profile.waist_cm,
+        'hips_cm':   profile.hips_cm,
+        'recommended_size': profile.recommended_size(),
+    })
+
+
+# ── Complete the Look ─────────────────────────────────────────────────────────
+
+def complete_the_look(request, product_id):
+    """Return complementary products for a given product."""
+    import random as _random
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    cat_slug = product.category.slug.lower()
+
+    # Map category → what to pair with
+    PAIR_MAP = {
+        'women-dresses':  ['women-heels', 'accessories-bags', 'accessories-sunglasses'],
+        'women-tops':     ['women-skirts', 'women-heels', 'accessories-bags'],
+        'women-skirts':   ['women-tops', 'women-heels', 'accessories-bags'],
+        'men-shirts':     ['men-jeans', 'men-shoes', 'accessories-belts', 'accessories-watches'],
+        'men-t-shirts':   ['men-jeans', 'men-shoes', 'accessories-watches'],
+        'men-jackets':    ['men-jeans', 'men-shirts', 'men-shoes'],
+        'men-jeans':      ['men-shirts', 'men-t-shirts', 'men-shoes', 'accessories-belts'],
+        'women-heels':    ['women-dresses', 'women-skirts', 'accessories-bags'],
+        'men-shoes':      ['men-jeans', 'men-shirts', 'accessories-belts'],
+        'accessories-bags': ['women-dresses', 'women-tops', 'accessories-sunglasses'],
+    }
+    pair_slugs = PAIR_MAP.get(cat_slug, ['accessories-sunglasses', 'accessories-watches', 'accessories-bags'])
+
+    from .models import Category as Cat
+    results = []
+    for slug in pair_slugs:
+        try:
+            cat = Cat.objects.get(slug=slug)
+            p = Product.objects.filter(is_active=True, category=cat).order_by('?').first()
+            if p:
+                img = p.images.filter(is_primary=True).first() or p.images.first()
+                results.append({
+                    'id': p.id, 'name': p.name, 'price': str(p.price),
+                    'slug': p.slug, 'category': cat.name,
+                    'image': request.build_absolute_uri(img.image.url) if img else '',
+                })
+        except Cat.DoesNotExist:
+            pass
+
+    return JsonResponse({'success': True, 'products': results})
+
+
+# ── Recently Viewed ───────────────────────────────────────────────────────────
+
+@require_http_methods(["POST"])
+def track_recently_viewed(request, product_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({'ok': True})
+    from .models import RecentlyViewed
+    from django.utils import timezone
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    rv, created = RecentlyViewed.objects.get_or_create(user=request.user, product=product)
+    if not created:
+        RecentlyViewed.objects.filter(pk=rv.pk).update(viewed_at=timezone.now())
+    # Keep only last 20
+    old_ids = list(RecentlyViewed.objects.filter(user=request.user).order_by('-viewed_at').values_list('id', flat=True)[20:])
+    if old_ids:
+        RecentlyViewed.objects.filter(id__in=old_ids).delete()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def get_recently_viewed(request):
+    from .models import RecentlyViewed
+    items = RecentlyViewed.objects.filter(user=request.user).select_related('product')[:10]
+    data = []
+    for rv in items:
+        p = rv.product
+        img = p.images.filter(is_primary=True).first() or p.images.first()
+        data.append({
+            'id': p.id, 'name': p.name, 'price': str(p.price), 'slug': p.slug,
+            'image': request.build_absolute_uri(img.image.url) if img else '',
+        })
+    return JsonResponse({'products': data})
+
+
+# ── Stock Alerts ──────────────────────────────────────────────────────────────
+
+@require_http_methods(["POST"])
+@login_required
+def subscribe_stock_alert(request, product_id):
+    import json
+    from .models import StockAlert
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    data = json.loads(request.body) if request.body else {}
+    size = data.get('size', '')
+    _, created = StockAlert.objects.get_or_create(user=request.user, product=product, size=size)
+    return JsonResponse({'success': True, 'created': created,
+                         'message': "You'll be notified when this item is back in stock."})
+
+
+
+
+
+# ── Virtual Try-On (IDM-VTON via Hugging Face Space) ─────────────────────────
+
+@ensure_csrf_cookie
+def photo_tryon_page(request):
+    """Render the Virtual Try-On page — clothing items only (no accessories)."""
+    CLOTHING_SLUGS = [
+        'women-tops', 'women-skirts', 'women-dresses',
+        'men-shirts', 'men-t-shirts', 'men-jackets', 'men-jeans',
+        'kids-girls', 'kids-boys', 'kids-infants',
+    ]
+    products = (
+        Product.objects.filter(is_active=True, category__slug__in=CLOTHING_SLUGS)
+        .prefetch_related('images', 'category')
+        .filter(images__isnull=False)
+        .distinct()
+        .order_by('-created_at')[:60]
+    )
+    response = render(request, 'products/photo_tryon.html', {'products': products})
+    # Prevent bfcache — stops the browser restoring a stale DOM with error banners visible
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    return response
+
+
+@require_http_methods(["POST"])
+def photo_tryon_enqueue(request):
+    """
+    Save the uploaded photo, resolve garment paths, then run the try-on in a
+    background thread.  Returns a task_id immediately for polling.
+
+    Uses threading instead of Celery — avoids the Windows worker process issues
+    with the filesystem broker.  Task state is stored as a JSON file in
+    media/tryon_state/<task_id>.json so the status endpoint can read it.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'login_required'}, status=401)
+
+    import tempfile, os, uuid, json, threading
+    from django.conf import settings
+
+    person_file   = request.FILES.get('photo')
+    product_slugs = [s.strip() for s in request.POST.getlist('product_slugs') if s.strip()]
+    tryon_mode    = request.POST.get('tryon_mode', 'adult')   # 'adult' | 'baby'
+    if tryon_mode not in ('adult', 'baby'):
+        tryon_mode = 'adult'
+
+    if not person_file:
+        return JsonResponse({'success': False, 'error': 'No photo uploaded.'}, status=400)
+    if not product_slugs:
+        return JsonResponse({'success': False, 'error': 'No garments selected.'}, status=400)
+    if len(product_slugs) > 4:
+        return JsonResponse({'success': False, 'error': 'Maximum 4 garments per outfit.'}, status=400)
+
+    # Resolve garment infos
+    garment_infos = []
+    for slug in product_slugs:
+        try:
+            product = Product.objects.select_related('category').get(slug=slug, is_active=True)
+        except Product.DoesNotExist:
+            return JsonResponse({'success': False, 'error': f'Product "{slug}" not found.'}, status=400)
+        img = product.images.filter(is_primary=True).first() or product.images.first()
+        if not img:
+            return JsonResponse({'success': False, 'error': f'"{product.name}" has no image.'}, status=400)
+        path = os.path.join(settings.MEDIA_ROOT, img.image.name)
+        if not os.path.exists(path):
+            return JsonResponse({'success': False, 'error': f'Image missing for "{product.name}".'}, status=400)
+        garment_infos.append({
+            'path': path,
+            'category_slug': product.category.slug if product.category else '',
+            'name': product.name,
+            'product_id': product.id,
+        })
+
+    # Save person photo to temp file
+    suffix = os.path.splitext(person_file.name)[1] or '.jpg'
+    tryon_tmp_dir = os.path.join(settings.MEDIA_ROOT, 'tryon_tmp')
+    os.makedirs(tryon_tmp_dir, exist_ok=True)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix, dir=tryon_tmp_dir)
+    try:
+        for chunk in person_file.chunks():
+            tmp.write(chunk)
+        tmp.close()
+    except Exception as e:
+        tmp.close()
+        try: os.unlink(tmp.name)
+        except OSError: pass
+        return JsonResponse({'success': False, 'error': f'Could not save photo: {e}'}, status=500)
+
+    # State file — written by the background thread, read by the status endpoint
+    task_id   = uuid.uuid4().hex
+    state_dir = os.path.join(settings.MEDIA_ROOT, 'tryon_state')
+    os.makedirs(state_dir, exist_ok=True)
+    state_path = os.path.join(state_dir, f'{task_id}.json')
+
+    def _write_state(data: dict):
+        with open(state_path, 'w') as f:
+            json.dump(data, f)
+
+    _write_state({'state': 'PENDING', 'label': 'Starting…'})
+
+    user_id = request.user.id
+
+    def _run():
+        """Background thread — runs the full try-on chain and writes state updates."""
+        import django
+        django.db.close_old_connections()   # required for threads on Django
+
+        from .tasks import _save_original, _record_history
+
+        if tryon_mode == 'baby':
+            # ── Baby / Kids mode — Stable Diffusion Inpainting ──────────────
+            from .baby_tryon_service import run_baby_tryon
+            try:
+                _write_state({'state': 'PROGRESS', 'step': 1, 'total': 1,
+                              'label': 'Loading AI model for baby try-on…'})
+                result_local = run_baby_tryon(
+                    person_path=tmp.name,
+                    garment_infos=garment_infos,
+                    write_state=_write_state,
+                )
+                _write_state({'state': 'PROGRESS', 'step': 1, 'total': 1,
+                              'label': 'Finalizing your look…'})
+                from .tryon_service import _save_result
+                result_rel   = _save_result(result_local, settings.MEDIA_ROOT)
+                original_rel = _save_original(tmp.name, settings.MEDIA_ROOT)
+                _record_history(user_id, garment_infos[0].get('product_id') if garment_infos else None,
+                                original_rel, result_rel)
+                _write_state({'state': 'SUCCESS', 'result_url': result_rel})
+            except Exception as e:
+                msg = str(e)
+                if 'interpreter shutdown' in msg.lower() or 'cannot schedule' in msg.lower():
+                    msg = 'Server was reloaded during generation. Please try again.'
+                _write_state({'state': 'FAILURE', 'error': msg, 'step_failed': 1})
+            finally:
+                try: os.unlink(tmp.name)
+                except OSError: pass
+                django.db.close_old_connections()
+            return
+
+        # ── Adult mode — IDM-VTON via Hugging Face ───────────────────────────
+        from .tryon_service import _call_hf, _get_hf_client, _save_result, filter_and_sort_garments
+        import shutil, tempfile as _tmp
+
+        garments = filter_and_sort_garments(garment_infos)
+        if not garments:
+            _write_state({'state': 'FAILURE',
+                          'error': 'No supported clothing items. Accessories are skipped.'})
+            return
+
+        total          = len(garments)
+        current_person = tmp.name
+        intermediates  = []
+
+        try:
+            _write_state({'state': 'PROGRESS', 'step': 0, 'total': total,
+                          'label': 'Connecting to AI server…'})
+            try:
+                hf_client = _get_hf_client()
+            except RuntimeError as e:
+                _write_state({'state': 'FAILURE', 'error': str(e)})
+                return
+
+            for step, g in enumerate(garments, start=1):
+                _write_state({'state': 'PROGRESS', 'step': step, 'total': total,
+                              'label': f"Fitting {g['name']}…"})
+                try:
+                    result_local = _call_hf(current_person, g['path'],
+                                            g['vton_category'], client=hf_client)
+                except RuntimeError as e:
+                    _write_state({'state': 'FAILURE', 'error': str(e), 'step_failed': step})
+                    return
+
+                if step < total:
+                    ext = os.path.splitext(result_local)[1] or '.png'
+                    t   = _tmp.NamedTemporaryFile(delete=False, suffix=ext)
+                    t.close()
+                    shutil.copy2(result_local, t.name)
+                    intermediates.append(t.name)
+                    current_person = t.name
+                else:
+                    _write_state({'state': 'PROGRESS', 'step': step, 'total': total,
+                                  'label': 'Finalizing your look…'})
+                    result_rel   = _save_result(result_local, settings.MEDIA_ROOT)
+                    original_rel = _save_original(tmp.name, settings.MEDIA_ROOT)
+                    _record_history(user_id, garments[0].get('product_id'),
+                                    original_rel, result_rel)
+                    _write_state({'state': 'SUCCESS', 'result_url': result_rel})
+
+        except Exception as e:
+            msg = str(e)
+            if 'interpreter shutdown' in msg.lower() or 'cannot schedule' in msg.lower():
+                msg = 'Server was reloaded during generation. Please try again.'
+            _write_state({'state': 'FAILURE', 'error': msg})
+        finally:
+            for f in intermediates:
+                try: os.unlink(f)
+                except OSError: pass
+            try: os.unlink(tmp.name)
+            except OSError: pass
+            django.db.close_old_connections()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    return JsonResponse({'success': True, 'task_id': task_id, 'total': len(garment_infos)})
+
+
+def photo_tryon_status(request, task_id):
+    """
+    Poll endpoint — reads the JSON state file written by the background thread.
+    """
+    import json, os, re
+    from django.conf import settings
+
+    # Validate task_id is a hex string to prevent path traversal
+    if not re.fullmatch(r'[0-9a-f]{32}', task_id):
+        return JsonResponse({'state': 'FAILURE', 'error': 'Invalid task ID.'})
+
+    state_path = os.path.join(settings.MEDIA_ROOT, 'tryon_state', f'{task_id}.json')
+
+    if not os.path.exists(state_path):
+        return JsonResponse({'state': 'PENDING', 'label': 'Waiting to start…'})
+
+    try:
+        with open(state_path) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return JsonResponse({'state': 'PENDING', 'label': 'Starting…'})
+
+    state = data.get('state', 'PENDING')
+
+    if state == 'PENDING':
+        return JsonResponse({'state': 'PENDING', 'label': data.get('label', 'Waiting…')})
+
+    if state == 'PROGRESS':
+        return JsonResponse({
+            'state': 'PROGRESS',
+            'step':  data.get('step', 0),
+            'total': data.get('total', 0),
+            'label': data.get('label', 'Processing…'),
+        })
+
+    if state == 'SUCCESS':
+        full_url = request.build_absolute_uri(settings.MEDIA_URL + data['result_url'])
+        # Delete state file — result is now in the response, no need to keep it
+        try: os.unlink(state_path)
+        except OSError: pass
+        return JsonResponse({'state': 'SUCCESS', 'result_url': full_url})
+
+    # FAILURE — delete state file so it can't bleed into future page loads
+    try: os.unlink(state_path)
+    except OSError: pass
+    return JsonResponse({
+        'state': 'FAILURE',
+        'error': data.get('error', 'Unknown error'),
+        'step_failed': data.get('step_failed'),
+    })
+
+
+# ── Try-On History (Virtual Wardrobe) ────────────────────────────────────────
+
+@login_required
+def tryon_history(request):
+    """Display the logged-in user's Virtual Try-On history, newest first."""
+    from .models import TryOnHistory
+    records = (
+        TryOnHistory.objects
+        .filter(user=request.user)
+        .select_related('product', 'product__category')
+        .order_by('-created_at')
+    )
+    return render(request, 'products/tryon_history.html', {'records': records})
+
+
+def get_product_sizes(request, product_id):
+    """Return available sizes for a product (used by My Wardrobe add-to-cart)."""
+    from .models import Inventory
+    sizes = list(
+        Inventory.objects.filter(product_id=product_id, quantity__gt=0)
+        .exclude(size='One Size')
+        .values_list('size', flat=True)
+        .distinct()
+    )
+    SIZE_ORDER = {'XS': 0, 'S': 1, 'M': 2, 'L': 3, 'XL': 4, 'XXL': 5}
+    sizes.sort(key=lambda s: SIZE_ORDER.get(s, 99))
+    return JsonResponse({'sizes': sizes})
+
+
+# ── AR Try-On (MediaPipe — fully client-side) ─────────────────────────────────
+
+def ar_tryon(request, product_id):
+    """
+    Render the live AR try-on page.
+
+    Passes to template:
+      product            — the Product instance
+      product_image_url  — URL of the primary product image (PNG preferred)
+      ar_mode            — 'face' | 'hands' | 'pose'  (which MediaPipe model to load)
+      ar_category        — exact keyword used in the JS switch() for landmark mapping
+    """
+    from django.templatetags.static import static
+
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+
+    cat_slug = product.category.slug if product.category else ''
+
+    # ── Static transparent AR assets (used instead of product photos) ────────
+    # Product photos are portraits of people wearing items — not transparent cutouts.
+    # For AR overlay we need transparent-background PNGs anchored to landmarks.
+    STATIC_AR_ASSETS = {
+        'accessories-sunglasses': 'ar_assets/sunglasses.png',
+    }
+
+    if cat_slug in STATIC_AR_ASSETS:
+        product_image_url = request.build_absolute_uri(static(STATIC_AR_ASSETS[cat_slug]))
+    else:
+        # Prefer PNG images (transparent background) for clean overlay
+        img = (
+            product.images.filter(image__endswith='.png', is_primary=True).first()
+            or product.images.filter(image__endswith='.png').first()
+            or product.images.filter(is_primary=True).first()
+            or product.images.first()
+        )
+        product_image_url = img.image.url if img else ''
+
+    # ── Map category slug → (ar_mode, ar_category keyword) ───────────────────
+    # ar_mode     → which MediaPipe solution to load (face / hands / pose)
+    # ar_category → the keyword used in the JS switch() for landmark placement
+    SLUG_MAP = {
+        # Face
+        'accessories-sunglasses': ('face',  'sunglasses'),
+        'women-earrings':         ('face',  'earrings'),
+        'women-necklaces':        ('face',  'necklaces'),
+        # Hands
+        'accessories-watches':    ('hands', 'watches'),
+        'accessories-bags':       ('hands', 'bags'),
+        # Pose — upper body
+        'women-tops':             ('pose',  'tops'),
+        'men-shirts':             ('pose',  'shirts'),
+        'men-t-shirts':           ('pose',  't-shirts'),
+        'men-jackets':            ('pose',  'jackets'),
+        'kids-boys':              ('pose',  'boys'),
+        'kids-girls':             ('pose',  'girls'),
+        'kids-infants':           ('pose',  'infants'),
+        # Pose — dresses
+        'women-dresses':          ('pose',  'dresses'),
+        # Pose — lower body
+        'accessories-belts':      ('pose',  'belts'),
+        'women-skirts':           ('pose',  'skirts'),
+        'men-jeans':              ('pose',  'jeans'),
+        # Pose — footwear
+        'men-shoes':              ('pose',  'shoes'),
+        'women-heels':            ('pose',  'heels'),
+    }
+
+    ar_mode, ar_category = SLUG_MAP.get(cat_slug, ('pose', 'tops'))
+
+    return render(request, 'products/ar_tryon.html', {
+        'product':           product,
+        'product_image_url': product_image_url,
+        'ar_mode':           ar_mode,
+        'ar_category':       ar_category,
+    })

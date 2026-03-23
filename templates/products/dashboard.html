@@ -16,10 +16,15 @@
         font-size: 1.8rem;
         font-weight: 700;
         margin: 0;
+        color: #fff;
     }
     .dashboard-header p {
         opacity: 1;
         color: #ffffff;
+    }
+    .dashboard-header i {
+        color: #fff;
+    }
         margin: 0.3rem 0 0;
         font-size: 0.95rem;
     }
@@ -111,7 +116,7 @@
     .status-shipped      { background: #d0eaf8; color: #1a7abf; }
     .status-out_for_delivery { background: #c8f0da; color: #1a8a4a; }
     .status-delivered    { background: #c8f0da; color: #1a8a4a; }
-    .status-cancelled    { background: #fdd8d8; color: #c01a1a; }
+    .status-cancelled    { background: #c0392b; color: #fff; }
 
     /* Progress bar for stock */
     .stock-bar { height: 6px; border-radius: 3px; background: #e9ecef; overflow: hidden; }
@@ -136,9 +141,15 @@
         overflow: hidden;
     }
     .card-section .card-header {
-        background: #fff;
+        background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%) !important;
         border-bottom: 1px solid #eee;
         padding: 1rem 1.25rem;
+        color: #fff !important;
+    }
+    .card-section .card-header *,
+    .card-section .card-header span,
+    .card-section .card-header .fw-semibold {
+        color: #fff !important;
     }
     .empty-state {
         text-align: center;

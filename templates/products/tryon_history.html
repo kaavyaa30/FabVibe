@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Wardrobe — FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+.wardrobe-hero {
+  background: linear-gradient(135deg, #456273 0%, #2c3e50 100%);
+  color: #fff; padding: 3rem 0 2.5rem; margin-bottom: 2.5rem;
+}
+.wardrobe-hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: .3rem; color: #fff; }
+.wardrobe-hero p  { opacity: .8; margin: 0; font-size: .95rem; color: #fff; }
+.wardrobe-hero .hero-meta {
+  display: flex; align-items: center; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap;
+}
+.wardrobe-hero .hero-stat {
+  background: rgba(255,255,255,.15); border-radius: 10px;
+  padding: .4rem .9rem; font-size: .85rem; font-weight: 600;
+}
+.wardrobe-card {
+  border-radius: 16px; overflow: hidden; border: none;
+  transition: transform .18s, box-shadow .2s; background: #fff;
+}
+.wardrobe-card:hover { transform: translateY(-5px); box-shadow: 0 12px 32px rgba(0,0,0,.14); }
+.card-img-wrap {
+  position: relative; overflow: hidden; height: 260px; background: #f0f0f0;
+}
+.card-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: opacity .35s; }
+.card-img-wrap .img-before { position: absolute; inset: 0; opacity: 0; }
+.card-img-wrap:hover .img-after  { opacity: 0; }
+.card-img-wrap:hover .img-before { opacity: 1; }
+.card-img-wrap .hover-label {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.55); color: #fff; font-size: .7rem; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+.card-img-wrap:hover .hover-label { opacity: 1; }
+.card-img-wrap .date-badge {
+  position: absolute; top: 10px; left: 10px;
+  background: rgba(0,0,0,.55); color: #fff;
+  font-size: .68rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+}
+.wardrobe-card .card-body { padding: 1rem 1.1rem 1.1rem; }
+.wardrobe-card .product-name {
+  font-weight: 700; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+}
+.wardrobe-card .cat-tag {
+  display: inline-block; font-size: .7rem; font-weight: 600;
+  background: #eaf2f5; color: #456273; border-radius: 20px;
+  padding: 2px 9px; margin-bottom: .6rem;
+}
+.btn-atc {
+  background: linear-gradient(135deg, #456273, #2c3e50);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: .82rem; font-weight: 700; padding: .5rem 0;
+  width: 100%; transition: opacity .2s, transform .15s;
+}
+.btn-atc:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); color: #fff; }
+.btn-atc:disabled { opacity: .45; cursor: not-allowed; }
+.card-actions { display: flex; gap: .5rem; margin-top: .5rem; }
+.card-actions .btn { flex: 1; font-size: .78rem; border-radius: 8px; padding: .38rem 0; }
+.empty-state { text-align: center; padding: 5rem 1rem; }
+.empty-icon {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: linear-gradient(135deg, #eaf2f5, #d0e4ec);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.5rem; font-size: 2.8rem; color: #456273;
+}
+.empty-state h3 { font-weight: 800; color: #2c3e50; margin-bottom: .5rem; }
+.empty-state p  { color: #6c757d; max-width: 360px; margin: 0 auto 1.8rem; }
+.btn-tryon {
+  background: linear-gradient(135deg, #456273, #2c3e50);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 1rem; font-weight: 700; padding: .75rem 2.2rem;
+  transition: opacity .2s, transform .15s;
+}
+.btn-tryon:hover { opacity: .9; transform: translateY(-1px); color: #fff; }
+#atcToast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
+  min-width: 240px; border-radius: 12px; font-size: .88rem;
+  box-shadow: 0 6px 24px rgba(0,0,0,.18);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="wardrobe-hero">
+  <div class="container">
+    <h1><i class="fas fa-tshirt me-2"></i>My Wardrobe</h1>
+    <p>Every outfit you've tried on, saved in one place.</p>
+    {% if records %}
+    <div class="hero-meta">
+      <span class="hero-stat">
+        <i class="fas fa-layer-group me-1"></i>{{ records|length }} try-on{{ records|length|pluralize }}
+      </span>
+      <a href="{% url 'products:photo_tryon' %}" class="btn btn-light btn-sm fw-bold px-3">
+        <i class="fas fa-magic me-1"></i>New Try-On
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  {% if records %}
+  <div class="row g-4">
+    {% for r in records %}
+    <div class="col-6 col-sm-4 col-lg-3">
+      <div class="card wardrobe-card shadow-sm h-100">
+
+        <div class="card-img-wrap">
+          <img class="img-after"  src="{{ r.result_image.url }}"   alt="Try-on result">
+          <img class="img-before" src="{{ r.original_image.url }}" alt="Original photo">
+          <span class="date-badge">{{ r.created_at|date:"M d, Y" }}</span>
+          <span class="hover-label"><i class="fas fa-exchange-alt me-1"></i>Hover to compare</span>
+        </div>
+
+        <div class="card-body d-flex flex-column">
+          {% if r.product %}
+            <div class="product-name" title="{{ r.product.name }}">{{ r.product.name }}</div>
+            <span class="cat-tag">{{ r.product.category.name }}</span>
+            <div class="text-muted mb-3" style="font-size:.82rem">
+              <i class="fas fa-tag me-1"></i>&#8377;{{ r.product.price }}
+            </div>
+            <button class="btn btn-atc mt-auto"
+                    onclick="addToCart({{ r.product.id }}, this)">
+              <i class="fas fa-shopping-cart me-1"></i>Add to Cart
+            </button>
+            <div class="card-actions">
+              <a href="{% url 'products:product_detail' r.product.slug %}"
+                 class="btn btn-outline-secondary">
+                <i class="fas fa-eye me-1"></i>View
+              </a>
+              <a href="{{ r.result_image.url }}" download="fabvibe-tryon.jpg"
+                 class="btn btn-outline-secondary" title="Download">
+                <i class="fas fa-download"></i>
+              </a>
+            </div>
+          {% else %}
+            <div class="product-name text-muted fst-italic">Product no longer available</div>
+            <div class="mt-auto card-actions">
+              <a href="{{ r.result_image.url }}" download="fabvibe-tryon.jpg"
+                 class="btn btn-outline-secondary w-100">
+                <i class="fas fa-download me-1"></i>Download
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-tshirt"></i></div>
+    <h3>Your virtual wardrobe is empty</h3>
+    <p>Go try on some styles! Every outfit you generate will be saved here automatically.</p>
+    <a href="{% url 'products:photo_tryon' %}" class="btn btn-tryon">
+      <i class="fas fa-magic me-2"></i>Try On Styles Now
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Add-to-cart toast -->
+<div id="atcToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive">
+  <div class="d-flex">
+    <div class="toast-body" id="atcToastMsg"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+const CSRF = "{{ csrf_token }}";
+let _pendingProductId = null, _pendingBtn = null, _selectedSize = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  var modalHtml = '<div class="modal fade" id="sizeModal" tabindex="-1" aria-hidden="true">'
+    + '<div class="modal-dialog modal-dialog-centered modal-sm">'
+    + '<div class="modal-content" style="border-radius:16px;overflow:hidden">'
+    + '<div class="modal-header border-0 pb-0">'
+    + '<h6 class="modal-title fw-bold">Select a Size</h6>'
+    + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>'
+    + '</div>'
+    + '<div class="modal-body pt-2">'
+    + '<p class="text-muted small mb-3" id="sizeModalProduct"></p>'
+    + '<div id="sizeOptions" class="d-flex flex-wrap gap-2 mb-3"></div>'
+    + '<button id="sizeConfirmBtn" class="btn btn-atc w-100" disabled onclick="confirmAddToCart()">'
+    + '<i class="fas fa-shopping-cart me-1"></i>Add to Cart'
+    + '</button></div></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+});
+
+function addToCart(productId, btn) {
+  _pendingProductId = productId;
+  _pendingBtn = btn;
+  _selectedSize = null;
+
+  fetch('/products/product/' + productId + '/sizes/')
+    .then(function(r) { return r.json(); })
+    .catch(function() { return { sizes: [] }; })
+    .then(function(data) {
+      var sizes = data.sizes || [];
+      var opts  = document.getElementById('sizeOptions');
+      document.getElementById('sizeModalProduct').textContent =
+        btn.closest('.card').querySelector('.product-name').textContent.trim();
+      document.getElementById('sizeConfirmBtn').disabled = true;
+
+      if (sizes.length) {
+        opts.innerHTML = sizes.map(function(s) {
+          return '<button type="button" class="btn btn-outline-secondary size-opt"'
+            + ' style="min-width:48px;border-radius:8px;font-weight:600"'
+            + ' onclick="selectSize(\'' + s + '\',this)">' + s + '</button>';
+        }).join('');
+      } else {
+        opts.innerHTML = '<span class="text-muted small">No sizes available.</span>';
+      }
+      new bootstrap.Modal(document.getElementById('sizeModal')).show();
+    });
+}
+
+function selectSize(size, el) {
+  _selectedSize = size;
+  document.querySelectorAll('.size-opt').forEach(function(b) {
+    b.classList.remove('btn-dark'); b.classList.add('btn-outline-secondary');
+  });
+  el.classList.remove('btn-outline-secondary'); el.classList.add('btn-dark');
+  document.getElementById('sizeConfirmBtn').disabled = false;
+}
+
+function confirmAddToCart() {
+  if (!_pendingProductId || !_selectedSize) return;
+  var confirmBtn = document.getElementById('sizeConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i>Adding...';
+
+  fetch('/cart/add/' + _pendingProductId + '/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': CSRF,
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    body: JSON.stringify({ size: _selectedSize, quantity: 1 })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    bootstrap.Modal.getInstance(document.getElementById('sizeModal')).hide();
+    if (data.success) {
+      _pendingBtn.innerHTML = '<i class="fas fa-check me-1"></i>Added!';
+      _pendingBtn.style.background = 'linear-gradient(135deg,#27ae60,#1e8449)';
+      _pendingBtn.disabled = true;
+      showToast('Added to cart!', 'success');
+      var badge = document.querySelector('.nav-link[href*="cart"] .badge');
+      if (badge && data.cart_count != null) badge.textContent = data.cart_count;
+    } else {
+      showToast(data.error || 'Could not add to cart.', 'danger');
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>Add to Cart';
+    }
+  })
+  .catch(function() {
+    bootstrap.Modal.getInstance(document.getElementById('sizeModal')).hide();
+    showToast('Network error. Please try again.', 'danger');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<i class="fas fa-shopping-cart me-1"></i>Add to Cart';
+  });
+}
+
+function showToast(msg, type) {
+  var el = document.getElementById('atcToast');
+  el.className = 'toast align-items-center text-white border-0 bg-' + (type === 'success' ? 'success' : 'danger');
+  document.getElementById('atcToastMsg').textContent = msg;
+  new bootstrap.Toast(el, { delay: 3000 }).show();
+}
+</script>
+{% endblock %}

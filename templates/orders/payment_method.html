@@ -5,27 +5,27 @@
 {% block content %}
 <div class="container my-5">
     <h2 class="mb-4">Select Payment Method</h2>
-    
+
     <!-- Checkout Progress -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
                         <i class="fas fa-check"></i>
                     </div>
                     <div class="mt-2 text-muted">Shipping Address</div>
                 </div>
-                <div class="flex-fill" style="height: 2px; background-color: #28a745;"></div>
+                <div class="flex-fill" style="height:2px;background-color:#28a745;"></div>
                 <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
                         <i class="fas fa-check"></i>
                     </div>
                     <div class="mt-2 text-muted">Order Summary</div>
                 </div>
-                <div class="flex-fill" style="height: 2px; background-color: #28a745;"></div>
+                <div class="flex-fill" style="height:2px;background-color:#28a745;"></div>
                 <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
                         <strong>3</strong>
                     </div>
                     <div class="mt-2"><strong>Payment</strong></div>
@@ -33,124 +33,137 @@
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <!-- Payment Method Selection -->
         <div class="col-md-8">
-            <!-- Inventory error banner -->
             {% if inventory_errors %}
             <div class="alert alert-danger mb-4">
                 <strong>Some items in your cart are out of stock:</strong>
                 <ul class="mb-0 mt-2">
-                    {% for err in inventory_errors %}
-                    <li>{{ err }}</li>
-                    {% endfor %}
+                    {% for err in inventory_errors %}<li>{{ err }}</li>{% endfor %}
                 </ul>
                 <div class="mt-2">
-                    <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger">
-                        Go to Cart &amp; Fix
-                    </a>
+                    <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger">Go to Cart &amp; Fix</a>
                 </div>
             </div>
             {% endif %}
 
-            <div class="card mb-4">
-                <div class="card-header" style="color:#fff;">
-                    <h5 class="mb-0">Choose Payment Method</h5>
+            <form method="post" id="paymentForm" action="{% url 'orders:payment_method_selection' %}">
+                {% csrf_token %}
+                <input type="hidden" name="payment_method" id="selectedMethod" value="cod">
+
+                <div class="card mb-4" style="border:1px solid #dee2e6;border-radius:8px;overflow:hidden;">
+                    <div class="d-flex" style="min-height:340px;">
+
+                        <!-- Left Tab List -->
+                        <div class="pm-tabs" style="width:200px;min-width:200px;border-right:1px solid #dee2e6;background:#fafafa;">
+                            <div class="pm-tab active" data-target="cod" onclick="switchTab('cod')">
+                                <i class="fas fa-money-bill-wave me-2"></i>Cash on Delivery
+                            </div>
+                            <div class="pm-tab" data-target="upi" onclick="switchTab('upi')">
+                                <i class="fas fa-mobile-alt me-2"></i>UPI
+                            </div>
+                            <div class="pm-tab" data-target="card" onclick="switchTab('card')">
+                                <i class="fas fa-credit-card me-2"></i>Credit / Debit Card
+                            </div>
+                        </div>
+
+                        <!-- Right Content Panels -->
+                        <div class="flex-fill p-4">
+
+                            <!-- COD Panel -->
+                            <div class="pm-panel" id="panel-cod">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-money-bill-wave text-success me-2"></i>Cash on Delivery</h6>
+                                <div class="alert alert-success border-0" style="background:#e8f5e9;border-radius:8px;">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Pay with cash when your order arrives at your doorstep. No advance payment needed.
+                                </div>
+                                <ul class="text-muted small mt-3 ps-3">
+                                    <li>Keep exact change ready if possible</li>
+                                    <li>Our delivery agent will collect payment on delivery</li>
+                                    <li>You can verify your order before paying</li>
+                                </ul>
+                            </div>
+
+                            <!-- UPI Panel -->
+                            <div class="pm-panel d-none" id="panel-upi">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-mobile-alt text-primary me-2"></i>UPI Payment</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Enter UPI ID</label>
+                                    <input type="text" class="form-control" id="upiId" placeholder="e.g. name@upi" autocomplete="off">
+                                    <div class="form-text">Supported: Google Pay, PhonePe, Paytm, BHIM &amp; more</div>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <div style="width:120px;height:120px;border:2px dashed #ccc;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;">
+                                        <div><i class="fas fa-qrcode fa-2x mb-1 d-block"></i>QR Code</div>
+                                    </div>
+                                    <div class="text-muted small mt-2">Scan with any UPI app</div>
+                                </div>
+                            </div>
+
+                            <!-- Card Panel -->
+                            <div class="pm-panel d-none" id="panel-card">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-credit-card text-info me-2"></i>Credit / Debit Card</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Card Number</label>
+                                    <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="off">
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold">Expiry Date</label>
+                                        <input type="text" class="form-control" id="cardExpiry" placeholder="MM / YY" maxlength="7">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold">CVV</label>
+                                        <input type="password" class="form-control" id="cardCvv" placeholder="•••" maxlength="4">
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" style="height:24px;">
+                                    <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" style="height:24px;">
+                                    <img src="https://img.icons8.com/color/48/000000/rupay.png" alt="RuPay" style="height:24px;">
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form method="post" id="paymentForm">
-                        {% csrf_token %}
-                        
-                        <!-- Cash on Delivery -->
-                        <div class="payment-option mb-3">
-                            <div class="form-check p-3 border rounded">
-                                <input class="form-check-input" type="radio" name="payment_method" 
-                                       id="cod" value="cod" required>
-                                <label class="form-check-label w-100" for="cod">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                                Cash on Delivery (COD)
-                                            </h6>
-                                            <p class="text-muted mb-0 small">Pay with cash when your order is delivered</p>
-                                        </div>
-                                        <i class="fas fa-chevron-right text-muted"></i>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- UPI Payment -->
-                        <div class="payment-option mb-3">
-                            <div class="form-check p-3 border rounded">
-                                <input class="form-check-input" type="radio" name="payment_method" 
-                                       id="upi" value="upi" required>
-                                <label class="form-check-label w-100" for="upi">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                <i class="fas fa-mobile-alt text-primary me-2"></i>
-                                                UPI Payment
-                                            </h6>
-                                            <p class="text-muted mb-0 small">Pay using Google Pay, PhonePe, Paytm, or any UPI app</p>
-                                        </div>
-                                        <i class="fas fa-chevron-right text-muted"></i>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Credit/Debit Card -->
-                        <div class="payment-option mb-3">
-                            <div class="form-check p-3 border rounded">
-                                <input class="form-check-input" type="radio" name="payment_method" 
-                                       id="card" value="card" required>
-                                <label class="form-check-label w-100" for="card">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">
-                                                <i class="fas fa-credit-card text-info me-2"></i>
-                                                Credit / Debit Card
-                                            </h6>
-                                            <p class="text-muted mb-0 small">Pay securely using your credit or debit card</p>
-                                            <div class="mt-2">
-                                                <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" style="height: 24px;" class="me-2">
-                                                <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" style="height: 24px;" class="me-2">
-                                                <img src="https://img.icons8.com/color/48/000000/rupay.png" alt="RuPay" style="height: 24px;">
-                                            </div>
-                                        </div>
-                                        <i class="fas fa-chevron-right text-muted"></i>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg w-100">
-                                Continue to Payment <i class="fas fa-arrow-right"></i>
-                            </button>
-                        </div>
-                    </form>
+
+                <!-- Wallet Split Payment -->
+                {% if wallet_balance and wallet_balance > 0 %}
+                <div class="alert alert-success border-0 p-3 mb-3" style="background:#e8f5e9;border-radius:10px;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold"><i class="fas fa-wallet me-2" style="color:#456273;"></i>Reward Wallet</span>
+                        <span class="fw-bold" style="color:#456273;">₹{{ wallet_balance }} available</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="checkbox" id="useWallet" class="form-check-input m-0">
+                        <label for="useWallet" class="small mb-0">Apply wallet balance to reduce bill</label>
+                    </div>
+                    <div id="walletApplyInfo" class="small text-success mt-1" style="display:none;"></div>
+                    <input type="hidden" name="wallet_deduction" id="walletDeductionInput" value="0">
                 </div>
-            </div>
-            
-            <!-- Security Info -->
-            <div class="alert alert-info">
+                {% endif %}
+
+                <button type="submit" class="btn btn-lg w-100 text-white" style="background:#456273;">
+                    Continue to Payment <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </form>
+
+            <div class="alert alert-info mt-3">
                 <i class="fas fa-shield-alt me-2"></i>
                 <strong>Safe and Secure Payments.</strong> 100% Payment Protection. Easy Returns.
             </div>
         </div>
-        
-        <!-- Order Summary Sidebar -->
+
+        <!-- Order Summary Sidebar (unchanged) -->
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header" style="color:#fff;">
                     <h5 class="mb-0">Order Summary</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Shipping Address -->
                     <div class="mb-3">
                         <h6 class="text-muted mb-2">Delivering to:</h6>
                         <strong>{{ address.full_name }}</strong>
@@ -158,20 +171,15 @@
                             {{ address.address_line1 }}, {{ address.city }}, {{ address.state }} {{ address.postal_code }}
                         </div>
                     </div>
-                    
                     <hr>
-                    
-                    <!-- Price Breakdown -->
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal ({{ cart_items.count }} items)</span>
                         <span>₹{{ subtotal }}</span>
                     </div>
-                    
                     <div class="d-flex justify-content-between mb-2">
                         <span>Tax (18%)</span>
                         <span>₹{{ tax|floatformat:2 }}</span>
                     </div>
-                    
                     <div class="d-flex justify-content-between mb-2">
                         <span>Shipping Charges</span>
                         {% if shipping_charge == 0 %}
@@ -180,14 +188,11 @@
                             <span>₹{{ shipping_charge }}</span>
                         {% endif %}
                     </div>
-                    
                     <hr>
-                    
                     <div class="d-flex justify-content-between mb-3">
                         <strong>Total Amount</strong>
                         <strong class="text-primary">₹{{ total|floatformat:2 }}</strong>
                     </div>
-                    
                     <a href="{% url 'orders:order_summary' %}" class="btn btn-outline-secondary w-100">
                         <i class="fas fa-arrow-left"></i> Back to Summary
                     </a>
@@ -198,37 +203,98 @@
 </div>
 
 <style>
-.payment-option .form-check-input:checked ~ .form-check-label {
-    border-color: #456273;
-    background-color: #f0f8ff;
-}
-
-.payment-option .form-check {
+.pm-tab {
+    padding: 16px 18px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    font-size: 14px;
+    color: #555;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
 }
-
-.payment-option .form-check:hover {
-    border-color: #456273 !important;
-    box-shadow: 0 0 10px rgba(13, 110, 253, 0.1);
+.pm-tab:hover {
+    background: #f0f0f0;
+    color: #333;
 }
-
-.payment-option .form-check-input {
-    margin-top: 0.5rem;
+.pm-tab.active {
+    border-left: 3px solid #456273;
+    background: #fff;
+    color: #456273;
+    font-weight: 600;
 }
 </style>
 
 <script>
-// Add visual feedback when payment method is selected
-document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        document.querySelectorAll('.payment-option .form-check').forEach(option => {
-            option.classList.remove('border-primary');
-        });
+function switchTab(method) {
+    // Update hidden input
+    document.getElementById('selectedMethod').value = method;
+
+    // Update tab styles
+    document.querySelectorAll('.pm-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.target === method);
+    });
+
+    // Show/hide panels
+    document.querySelectorAll('.pm-panel').forEach(p => {
+        p.classList.toggle('d-none', p.id !== 'panel-' + method);
+    });
+}
+
+// Card number formatting
+const cardInput = document.getElementById('cardNumber');
+if (cardInput) {
+    cardInput.addEventListener('input', function () {
+        let v = this.value.replace(/\D/g, '').substring(0, 16);
+        this.value = v.replace(/(.{4})/g, '$1 ').trim();
+    });
+}
+
+// Expiry formatting
+const expiryInput = document.getElementById('cardExpiry');
+if (expiryInput) {
+    expiryInput.addEventListener('input', function () {
+        let v = this.value.replace(/\D/g, '').substring(0, 4);
+        if (v.length >= 3) v = v.substring(0, 2) + ' / ' + v.substring(2);
+        this.value = v;
+    });
+}
+
+// Wallet toggle
+const useWalletCb = document.getElementById('useWallet');
+if (useWalletCb) {
+    const orderTotal = parseFloat("{{ total|floatformat:2 }}");
+    const walletBal  = parseFloat("{{ wallet_balance|default:0|floatformat:2 }}");
+    const infoEl     = document.getElementById('walletApplyInfo');
+    const inputEl    = document.getElementById('walletDeductionInput');
+
+    useWalletCb.addEventListener('change', function () {
         if (this.checked) {
-            this.closest('.form-check').classList.add('border-primary');
+            const deduct    = Math.min(walletBal, orderTotal);
+            const remaining = Math.max(0, orderTotal - deduct).toFixed(2);
+            inputEl.value   = deduct.toFixed(2);
+            infoEl.textContent = `₹${deduct.toFixed(2)} deducted from wallet. You pay: ₹${remaining}`;
+            infoEl.style.display = 'block';
+        } else {
+            inputEl.value = '0';
+            infoEl.style.display = 'none';
         }
     });
+}
+
+// Prevent double-submit
+document.getElementById('paymentForm').addEventListener('submit', function (e) {
+    const deductInput = document.getElementById('walletDeductionInput');
+    if (deductInput && parseFloat(deductInput.value) > 0) {
+        fetch('/wallet/apply/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+            body: JSON.stringify({ amount: deductInput.value, order_total: "{{ total|floatformat:2 }}" }),
+            keepalive: true,
+        });
+    }
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 });
 </script>
 {% endblock %}

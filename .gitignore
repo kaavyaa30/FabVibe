@@ -7,3 +7,5 @@ staticfiles/
 *.log
 venv/
 env/
+celery_broker/
+celery_results/

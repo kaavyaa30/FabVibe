@@ -144,11 +144,9 @@
                         </a>
                     </div>
                     {% else %}
-                    <form method="get" action="{% url 'orders:payment_method_selection' %}">
-                        <button type="submit" class="btn btn-primary w-100 mb-2">
-                            Proceed to Payment <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </form>
+                    <a href="{% url 'orders:payment_method_selection' %}" class="btn btn-primary w-100 mb-2">
+                        Proceed to Payment <i class="fas fa-arrow-right"></i>
+                    </a>
                     {% endif %}
                     
                     <a href="{% url 'orders:checkout' %}" class="btn btn-outline-secondary w-100">

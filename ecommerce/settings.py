@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'cart',
     'orders',
     'admin_panel',
+    'wallet',
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,  # seconds to wait on a locked DB before raising
+        },
     }
 }
 
@@ -116,9 +120,17 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@fabvibe.com')
+ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@fabvibe.com')  # receives CC on dispatch emails
 
-# SMS Gateway Configuration (Twilio example)
-SMS_BACKEND = config('SMS_BACKEND', default='console')  # 'twilio' or 'console'
+# Brevo (Sendinblue) transactional email API key
+BREVO_API_KEY = config('BREVO_API_KEY', default='')
+BREVO_SENDER_EMAIL = config('BREVO_SENDER_EMAIL', default='')
+
+# SMS / WhatsApp Gateway Configuration
+SMS_BACKEND = config('SMS_BACKEND', default='console')  # 'whatsapp', 'fast2sms', 'twilio', 'console'
+FAST2SMS_API_KEY = config('FAST2SMS_API_KEY', default='')
+WHATSAPP_ACCESS_TOKEN = config('WHATSAPP_ACCESS_TOKEN', default='')       # Meta permanent token
+WHATSAPP_PHONE_NUMBER_ID = config('WHATSAPP_PHONE_NUMBER_ID', default='') # from Meta developer console
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER', default='')
@@ -148,20 +160,46 @@ OTP_LENGTH = 6
 RETURN_EXCHANGE_DAYS = 7
 LOW_STOCK_THRESHOLD = 10
 
-# Remove.bg API
-REMOVEBG_API_KEY = config('REMOVEBG_API_KEY', default='rCm6GiQXqSb1Mt1s6WPnJ4cK')
+
+# Hugging Face token for IDM-VTON ZeroGPU access
+HF_TOKEN = config('HF_TOKEN', default='')
+if HF_TOKEN:
+    import os as _os
+    _os.environ['HF_TOKEN'] = HF_TOKEN
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+# filesystem:// broker — zero dependencies, works on Windows, shared between
+# the Django process and the Celery worker process (unlike memory://).
+# For production switch to: redis://localhost:6379/0
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='filesystem://')
+
+# Suppress the Celery 6 deprecation warning about broker connection retries
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Use filesystem backend instead of django-db to avoid SQLite lock contention.
+_CELERY_RESULTS_DIR = BASE_DIR / 'celery_results'
+_CELERY_RESULTS_DIR.mkdir(exist_ok=True)
+# Windows requires file:///C:/path/to/dir (triple slash, forward slashes)
+_default_result_backend = 'file:///' + _CELERY_RESULTS_DIR.as_posix().lstrip('/')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='') or _default_result_backend
+
+_BROKER_DATA = str(BASE_DIR / 'celery_broker' / 'data')
+_BROKER_PROCESSED = str(BASE_DIR / 'celery_broker' / 'processed')
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'data_folder_in':   _BROKER_DATA,
+    'data_folder_out':  _BROKER_DATA,
+    'processed_folder': _BROKER_PROCESSED,
+}
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60
+# Store results even when task returns a dict with success=False
+CELERY_TASK_IGNORE_RESULT = False
 
-# For testing: execute tasks synchronously
 import sys
 if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True

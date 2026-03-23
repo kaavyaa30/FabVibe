@@ -14,7 +14,20 @@ urlpatterns = [
     path('wishlist/add/<int:product_id>/', views.add_to_wishlist, name='add_to_wishlist'),
     path('wishlist/remove/<int:product_id>/', views.remove_from_wishlist, name='remove_from_wishlist'),
     path('dashboard/', views.dashboard, name='dashboard'),
-    path('remove-background/', views.remove_background, name='remove_background'),
     path('product/<int:product_id>/reviews/', views.get_product_reviews, name='get_product_reviews'),
     path('product/<int:product_id>/review/submit/', views.submit_review, name='submit_review'),
+    # New features
+    path('size-recommender/', views.size_recommender, name='size_recommender'),
+    path('product/<int:product_id>/complete-the-look/', views.complete_the_look, name='complete_the_look'),
+    path('product/<int:product_id>/track-view/', views.track_recently_viewed, name='track_recently_viewed'),
+    path('recently-viewed/', views.get_recently_viewed, name='recently_viewed'),
+    path('product/<int:product_id>/stock-alert/', views.subscribe_stock_alert, name='stock_alert'),
+    # Virtual Try-On
+    path('tryon/', views.photo_tryon_page, name='photo_tryon'),
+    path('tryon/enqueue/', views.photo_tryon_enqueue, name='photo_tryon_enqueue'),
+    path('tryon/status/<str:task_id>/', views.photo_tryon_status, name='photo_tryon_status'),
+    path('tryon/history/', views.tryon_history, name='tryon_history'),
+    path('product/<int:product_id>/sizes/', views.get_product_sizes, name='get_product_sizes'),
+    # AR Try-On (MediaPipe — client-side only)
+    path('product/<int:product_id>/ar-tryon/', views.ar_tryon, name='ar_tryon'),
 ]

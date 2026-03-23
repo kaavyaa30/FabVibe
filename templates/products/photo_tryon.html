@@ -1,0 +1,719 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Virtual Try-On — FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Hero ── */
+.vton-hero {
+  background: #456273;
+  color: #fff; padding: 2.5rem 0 2rem; margin-bottom: 2rem;
+}
+.vton-hero h1 { font-size: 2rem; font-weight: 800; color: #fff; }
+.vton-hero p  { opacity: .85; margin: 0; color: #fff; }
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2.5px dashed #456273; border-radius: 16px; padding: 2rem 1rem;
+  text-align: center; cursor: pointer; background: #f8fbfc;
+  transition: background .2s, border-color .2s;
+  min-height: 220px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.upload-zone:hover, .upload-zone.drag-over { background: #eaf2f5; border-color: #2c3e50; }
+.upload-zone img.preview { max-height: 200px; max-width: 100%; border-radius: 10px; object-fit: contain; }
+.upload-zone .ph-icon { font-size: 2.5rem; color: #456273; margin-bottom: .5rem; }
+.upload-zone .ph-text { color: #6c757d; font-size: .9rem; }
+
+/* ── Garment grid ── */
+.garment-card {
+  cursor: pointer; border: 2.5px solid transparent;
+  border-radius: 12px; overflow: hidden; position: relative;
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+}
+.garment-card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.garment-card.selected { border-color: #456273; }
+.garment-card img { height: 140px; object-fit: cover; width: 100%; }
+.garment-card .card-body { padding: .5rem .75rem; }
+.sel-badge {
+  display: none; position: absolute; top: 6px; right: 6px;
+  background: #456273; color: #fff; border-radius: 50%;
+  width: 26px; height: 26px; font-size: .75rem; font-weight: 700;
+  align-items: center; justify-content: center;
+}
+.garment-card.selected .sel-badge { display: flex; }
+
+/* ── Outfit tray ── */
+#outfitTray {
+  display: flex; gap: .75rem; flex-wrap: wrap; min-height: 72px;
+  padding: .75rem; border: 2px dashed #dee2e6; border-radius: 12px;
+  background: #f8f9fa; align-items: center;
+}
+.tray-item { position: relative; width: 64px; text-align: center; }
+.tray-item img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+.tray-item .rm {
+  position: absolute; top: -7px; right: -7px;
+  background: #dc3545; color: #fff; border: none; border-radius: 50%;
+  width: 20px; height: 20px; font-size: .6rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.tray-item .lbl { font-size: .62rem; color: #456273; font-weight: 700; margin-top: 2px; }
+.tray-arrow { font-size: 1.1rem; color: #adb5bd; align-self: center; }
+#trayEmpty { color: #adb5bd; font-size: .85rem; }
+
+/* ── Generate button ── */
+#tryOnBtn {
+  background: linear-gradient(135deg, #456273, #2c3e50);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: 1.1rem; font-weight: 700; padding: .9rem 2.8rem;
+  transition: opacity .2s, transform .15s;
+}
+#tryOnBtn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+#tryOnBtn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Loading overlay ── */
+#loadingOverlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15, 20, 30, .82); z-index: 9999;
+  flex-direction: column; align-items: center; justify-content: center;
+  color: #fff; text-align: center; padding: 2rem;
+}
+#loadingOverlay.active { display: flex; }
+
+/* Pulsing garment icon */
+.vton-icon-wrap {
+  width: 90px; height: 90px; border-radius: 50%;
+  background: rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.5rem; position: relative;
+}
+.vton-icon-wrap::before {
+  content: ''; position: absolute; inset: -6px;
+  border-radius: 50%; border: 3px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  animation: spin 1.1s linear infinite;
+}
+.vton-icon-wrap i { font-size: 2.2rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#loadingOverlay h4 { font-size: 1.35rem; font-weight: 800; margin-bottom: .3rem; }
+#loadingOverlay .sub { opacity: .75; font-size: .9rem; max-width: 320px; margin-bottom: 1.5rem; }
+
+/* Step list */
+#stepList { width: 100%; max-width: 360px; }
+.step-row {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .5rem .9rem; border-radius: 10px;
+  background: rgba(255,255,255,.07); margin-bottom: .4rem;
+  font-size: .9rem; transition: background .4s;
+}
+.step-row.s-active  { background: rgba(255,255,255,.18); font-weight: 700; }
+.step-row.s-done    { background: rgba(40,167,69,.3); }
+.step-row.s-error   { background: rgba(220,53,69,.3); }
+.step-row .s-icon   { width: 22px; text-align: center; flex-shrink: 0; }
+.step-row .s-label  { flex: 1; text-align: left; }
+.step-row .s-time   { font-size: .75rem; opacity: .65; }
+
+/* Elapsed timer */
+#elapsedWrap { margin-top: 1.2rem; font-size: .85rem; opacity: .65; }
+
+/* ── Result ── */
+#resultSection { display: none; }
+#resultSection.visible { display: block; }
+#resultImg { max-width: 100%; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,.18); }
+
+/* ── Error ── */
+#errorBanner { display: none; }
+
+/* ── Mode pills ── */
+.mode-pill {
+  cursor: pointer;
+  padding: .45rem 1rem;
+  border-radius: 20px;
+  border: 2px solid #dee2e6;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #6c757d;
+  transition: all .2s;
+  user-select: none;
+}
+.mode-pill.active {
+  border-color: #456273;
+  background: #456273;
+  color: #fff;
+}
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════════════════════════════════════════════════
+     LOADING OVERLAY  (real-time SSE-driven progress)
+════════════════════════════════════════════════════════════════ -->
+<div id="loadingOverlay">
+  <div class="vton-icon-wrap">
+    <i class="fas fa-tshirt"></i>
+  </div>
+  <h4 id="loadingHeadline">AI is building your outfit…</h4>
+  <p class="sub">The AI model may take ~30–60 s to wake up, then ~30–60 s per garment.<br>
+    <strong>Please keep this tab open.</strong></p>
+
+  <div id="stepList"></div>
+
+  <div id="elapsedWrap">
+    Time elapsed: <span id="elapsedTimer">0:00</span>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="vton-hero">
+  <div class="container">
+    <h1><i class="fas fa-tshirt me-2"></i>Virtual Try-On</h1>
+    <p>Upload your photo, build a full outfit, and see how it looks on you — powered by AI.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+
+  <!-- Error banner — hidden by default; JS shows it only on active errors -->
+  <!-- Inline script runs synchronously before bfcache can restore display:block -->
+  <script>
+    // This runs SYNCHRONOUSLY as the DOM is parsed — before bfcache restore
+    document.addEventListener('DOMContentLoaded', function() {
+      var b = document.getElementById('errorBanner');
+      if (b) b.style.setProperty('display', 'none', 'important');
+    });
+    window.addEventListener('pageshow', function() {
+      var b = document.getElementById('errorBanner');
+      if (b) b.style.setProperty('display', 'none', 'important');
+      var o = document.getElementById('loadingOverlay');
+      if (o) o.classList.remove('active');
+    });
+  </script>
+
+  <div id="errorBanner" class="alert alert-danger alert-dismissible mb-4" role="alert" style="display:none!important">
+    <i class="fas fa-exclamation-circle me-2"></i>
+    <span id="errorMsg">Something went wrong.</span>
+    <button type="button" class="btn-close" onclick="dismissError()"></button>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Step 1: Upload photo ── -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-1">
+            <span class="badge rounded-pill me-2" style="background:#456273">1</span>Your Photo
+          </h5>
+          <p class="text-muted small mb-3">Clear, front-facing photo works best.</p>
+
+          <!-- Mode selector -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase" style="letter-spacing:.05em">Who is trying on?</label>
+            <div class="d-flex gap-2">
+              <label class="mode-pill active" id="pill-adult">
+                <input type="radio" name="tryon_mode" value="adult" checked class="d-none">
+                <i class="fas fa-user me-1"></i>Adult
+              </label>
+              <label class="mode-pill" id="pill-baby">
+                <input type="radio" name="tryon_mode" value="baby" class="d-none">
+                <i class="fas fa-baby me-1"></i>Baby / Kids
+              </label>
+            </div>
+            <p id="modeHint" class="text-muted mt-2 mb-0" style="font-size:.78rem">
+              Uses IDM-VTON for realistic adult try-on.
+            </p>
+          </div>
+          <div class="upload-zone" id="uploadZone"
+               onclick="document.getElementById('photoInput').click()">
+            <div id="uploadPlaceholder">
+              <div class="ph-icon"><i class="fas fa-user-circle"></i></div>
+              <div class="ph-text">Click or drag &amp; drop your photo</div>
+              <div class="text-muted mt-1" style="font-size:.8rem">JPG / PNG · max 10 MB</div>
+            </div>
+            <img id="personPreview" class="preview" style="display:none" alt="Your photo">
+          </div>
+          <input type="file" id="photoInput" accept="image/*" class="d-none">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Build outfit ── -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h5 class="fw-bold mb-1">
+            <span class="badge rounded-pill me-2" style="background:#456273">2</span>Build Your Outfit
+            <small class="text-muted fw-normal ms-2" style="font-size:.78rem">
+              Up to 4 items · applied in order shown
+            </small>
+          </h5>
+          <p class="text-muted small mb-2">
+            Click items to add them to your outfit. They'll be applied top → bottom.
+          </p>
+
+          <!-- Outfit tray -->
+          <div id="outfitTray" class="mb-3">
+            <span id="trayEmpty">No items yet — pick from the grid below.</span>
+          </div>
+
+          <!-- Garment grid -->
+          {% if products %}
+          <div class="row g-2" id="garmentGrid" style="max-height:380px;overflow-y:auto">
+            {% for product in products %}
+            {% with img=product.images.first %}{% if img %}
+            <div class="col-6 col-sm-4 col-md-3">
+              <div class="garment-card card"
+                   data-slug="{{ product.slug }}"
+                   data-name="{{ product.name|escapejs }}"
+                   data-img="{{ img.image.url }}"
+                   onclick="toggleGarment(this)">
+                <div class="sel-badge" id="badge-{{ product.slug }}"></div>
+                <img src="{{ img.image.url }}" alt="{{ product.name }}">
+                <div class="card-body">
+                  <div class="small fw-bold text-truncate">{{ product.name }}</div>
+                  <div class="small text-muted">{{ product.category.name }}</div>
+                </div>
+              </div>
+            </div>
+            {% endif %}{% endwith %}
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted">No products available yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate button -->
+  <div class="text-center mt-4">
+    <button id="tryOnBtn" onclick="startTryOn()" disabled>
+      <i class="fas fa-magic me-2"></i>Try On Full Outfit
+    </button>
+    <p class="text-muted small mt-2" id="btnHint">
+      Upload your photo and select at least one garment.
+    </p>
+  </div>
+
+  <!-- ── Result ── -->
+  <div id="resultSection" class="mt-5">
+    <h3 class="text-center fw-bold mb-4">
+      <i class="fas fa-star me-2" style="color:#f39c12"></i>Here's your full outfit!
+    </h3>
+    <div class="row justify-content-center g-4">
+      <div class="col-md-5 text-center">
+        <p class="text-muted small mb-2">Your Original Photo</p>
+        <img id="beforeImg" class="img-fluid rounded-3 shadow-sm"
+             style="max-height:460px;object-fit:contain" alt="Before">
+      </div>
+      <div class="col-md-5 text-center">
+        <p class="text-muted small mb-2">With Your Outfit</p>
+        <img id="resultImg" alt="Try-On Result">
+      </div>
+    </div>
+    <div class="text-center mt-4 d-flex gap-3 justify-content-center flex-wrap">
+      <a id="downloadBtn" href="#" download="fabvibe-outfit.jpg"
+         class="btn btn-outline-secondary">
+        <i class="fas fa-download me-1"></i>Download
+      </a>
+      <button class="btn btn-primary" onclick="resetTryOn()">
+        <i class="fas fa-redo me-1"></i>Try Another Outfit
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ENQUEUE_URL      = "{% url 'products:photo_tryon_enqueue' %}";
+const STATUS_BASE      = "{% url 'products:photo_tryon_status' 'TASK_ID' %}";
+const IS_AUTHENTICATED = {{ user.is_authenticated|yesno:"true,false" }};
+const MAX_ITEMS    = 4;
+const POLL_MS      = 3000;   // poll every 3 seconds
+
+// Always read CSRF from the cookie at submit time — never use a stale baked-in value.
+function getCsrfToken() {
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '{{ csrf_token }}';  // fallback to template value
+}
+
+let personFile  = null;
+let tryonMode   = 'adult';   // 'adult' | 'baby'
+let outfitSlugs = [];   // ordered
+let outfitMeta  = {};   // slug → {name, img}
+
+// ── Mode pill toggle ─────────────────────────────────────────────────────────
+document.querySelectorAll('.mode-pill').forEach(pill => {
+  pill.addEventListener('click', function() {
+    document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    tryonMode = this.querySelector('input').value;
+    const hint = document.getElementById('modeHint');
+    if (tryonMode === 'baby') {
+      hint.textContent = 'Uses Stable Diffusion Inpainting — designed for babies & kids.';
+    } else {
+      hint.textContent = 'Uses IDM-VTON for realistic adult try-on.';
+    }
+  });
+});
+
+// ── Elapsed timer ────────────────────────────────────────────────────────────
+let _timerStart = null, _timerInterval = null;
+function startTimer() {
+  _timerStart = Date.now();
+  _timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - _timerStart) / 1000);
+    const m = Math.floor(s / 60), sec = s % 60;
+    document.getElementById('elapsedTimer').textContent =
+      `${m}:${String(sec).padStart(2,'0')}`;
+  }, 1000);
+}
+function stopTimer() { clearInterval(_timerInterval); }
+
+// ── Upload zone ──────────────────────────────────────────────────────────────
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) handlePersonFile(f);
+});
+document.getElementById('photoInput').addEventListener('change', function() {
+  if (this.files[0]) handlePersonFile(this.files[0]);
+});
+
+function handlePersonFile(file) {
+  if (file.size > 10 * 1024 * 1024) { showError('Photo too large — max 10 MB.'); return; }
+  dismissError();
+  personFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const p = document.getElementById('personPreview');
+    p.src = e.target.result; p.style.display = 'block';
+    document.getElementById('uploadPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  updateBtn();
+}
+
+// ── Garment toggle ───────────────────────────────────────────────────────────
+function toggleGarment(card) {
+  const slug = card.dataset.slug;
+  const idx  = outfitSlugs.indexOf(slug);
+  if (idx !== -1) {
+    outfitSlugs.splice(idx, 1);
+    delete outfitMeta[slug];
+    card.classList.remove('selected');
+  } else {
+    if (outfitSlugs.length >= MAX_ITEMS) {
+      showError(`Maximum ${MAX_ITEMS} garments per outfit.`); return;
+    }
+    outfitSlugs.push(slug);
+    outfitMeta[slug] = { name: card.dataset.name, img: card.dataset.img };
+    card.classList.add('selected');
+  }
+  refreshTray(); updateBtn();
+}
+
+// ── Outfit tray ──────────────────────────────────────────────────────────────
+const SLOT_NAMES = ['Top', 'Bottom', 'Layer 3', 'Layer 4'];
+
+function refreshTray() {
+  const tray = document.getElementById('outfitTray');
+  tray.innerHTML = '';
+  if (!outfitSlugs.length) {
+    tray.innerHTML = '<span id="trayEmpty" class="text-muted" style="font-size:.85rem">No items yet — pick from the grid below.</span>';
+    document.querySelectorAll('.garment-card').forEach(c => {
+      const b = document.getElementById('badge-' + c.dataset.slug);
+      if (b) b.textContent = '';
+    });
+    return;
+  }
+  outfitSlugs.forEach((slug, i) => {
+    const meta = outfitMeta[slug];
+    if (i > 0) {
+      const arr = document.createElement('span');
+      arr.className = 'tray-arrow'; arr.innerHTML = '<i class="fas fa-arrow-right"></i>';
+      tray.appendChild(arr);
+    }
+    const div = document.createElement('div');
+    div.className = 'tray-item';
+    div.innerHTML = `
+      <img src="${meta.img}" alt="${meta.name}" title="${meta.name}">
+      <button class="rm" onclick="removeTrayItem('${slug}',event)" title="Remove">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="lbl">${SLOT_NAMES[i] || `#${i+1}`}</div>`;
+    tray.appendChild(div);
+    const badge = document.getElementById('badge-' + slug);
+    if (badge) badge.textContent = i + 1;
+  });
+}
+
+function removeTrayItem(slug, e) {
+  e.stopPropagation();
+  const idx = outfitSlugs.indexOf(slug);
+  if (idx !== -1) { outfitSlugs.splice(idx, 1); delete outfitMeta[slug]; }
+  const card = document.querySelector(`.garment-card[data-slug="${slug}"]`);
+  if (card) card.classList.remove('selected');
+  refreshTray(); updateBtn();
+}
+
+// ── Button hint ──────────────────────────────────────────────────────────────
+function updateBtn() {
+  const btn  = document.getElementById('tryOnBtn');
+  const hint = document.getElementById('btnHint');
+  const ready = personFile && outfitSlugs.length > 0;
+  btn.disabled = !ready;
+  if (!personFile && !outfitSlugs.length)
+    hint.textContent = 'Upload your photo and select at least one garment.';
+  else if (!personFile)
+    hint.textContent = 'Upload your photo to continue.';
+  else if (!outfitSlugs.length)
+    hint.textContent = 'Select at least one garment.';
+  else
+    hint.textContent = `${outfitSlugs.length} garment${outfitSlugs.length > 1 ? 's' : ''} selected — ready to generate!`;
+}
+
+// ── Step list helpers ────────────────────────────────────────────────────────
+function buildStepList(slugs) {
+  const list = document.getElementById('stepList');
+  list.innerHTML = '';
+  slugs.forEach((slug, i) => {
+    const meta = outfitMeta[slug];
+    const row  = document.createElement('div');
+    row.className = 'step-row';
+    row.id = `srow-${i}`;
+    row.innerHTML = `
+      <span class="s-icon" id="sicon-${i}">
+        <i class="fas fa-circle" style="font-size:.5rem;opacity:.4"></i>
+      </span>
+      <span class="s-label" id="slabel-${i}">${SLOT_NAMES[i] || meta.name}: waiting…</span>
+      <span class="s-time"  id="stime-${i}"></span>`;
+    list.appendChild(row);
+  });
+  // Finalizing row
+  const fin = document.createElement('div');
+  fin.className = 'step-row'; fin.id = 'srow-final';
+  fin.innerHTML = `
+    <span class="s-icon" id="sicon-final">
+      <i class="fas fa-circle" style="font-size:.5rem;opacity:.4"></i>
+    </span>
+    <span class="s-label">Finalizing your look…</span>`;
+  list.appendChild(fin);
+}
+
+function setStepActive(i) {
+  const row = document.getElementById(`srow-${i}`);
+  if (!row) return;
+  row.classList.add('s-active');
+  document.getElementById(`sicon-${i}`).innerHTML =
+    '<i class="fas fa-circle-notch fa-spin"></i>';
+  document.getElementById(`slabel-${i}`).textContent =
+    `${SLOT_NAMES[i] || 'Garment ' + (i+1)}: fitting now…`;
+  document.getElementById('loadingHeadline').textContent =
+    `Fitting ${SLOT_NAMES[i] || 'garment ' + (i+1)}…`;
+}
+
+function setStepDone(i, elapsed) {
+  const row = document.getElementById(`srow-${i}`);
+  if (!row) return;
+  row.classList.remove('s-active'); row.classList.add('s-done');
+  document.getElementById(`sicon-${i}`).innerHTML =
+    '<i class="fas fa-check-circle" style="color:#5cb85c"></i>';
+  document.getElementById(`slabel-${i}`).textContent =
+    `${SLOT_NAMES[i] || 'Garment ' + (i+1)}: done ✓`;
+  if (elapsed) document.getElementById(`stime-${i}`).textContent = elapsed;
+}
+
+function setStepError(i) {
+  const row = document.getElementById(`srow-${i}`);
+  if (!row) return;
+  row.classList.remove('s-active'); row.classList.add('s-error');
+  document.getElementById(`sicon-${i}`).innerHTML =
+    '<i class="fas fa-times-circle" style="color:#e74c3c"></i>';
+}
+
+function setFinalActive() {
+  const row = document.getElementById('srow-final');
+  if (!row) return;
+  row.classList.add('s-active');
+  document.getElementById('sicon-final').innerHTML =
+    '<i class="fas fa-circle-notch fa-spin"></i>';
+  document.getElementById('loadingHeadline').textContent = 'Finalizing your look…';
+}
+
+// ── Main flow — enqueue then poll ────────────────────────────────────────────
+let _pollTimer = null;
+
+function startTryOn() {
+  if (!personFile || !outfitSlugs.length) return;
+
+  // Auth guard — show friendly message instead of a network error
+  if (!IS_AUTHENTICATED) {
+    showError('Please login to try on clothes. <a href="/users/login/?next=/tryon/" class="alert-link">Login here</a>');
+    return;
+  }
+
+  dismissError();
+
+  buildStepList(outfitSlugs);
+  document.getElementById('elapsedTimer').textContent = '0:00';
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('tryOnBtn').disabled = true;
+  startTimer();
+
+  const csrf = getCsrfToken();
+  const fd = new FormData();
+  fd.append('photo', personFile);
+  fd.append('csrfmiddlewaretoken', csrf);
+  fd.append('tryon_mode', tryonMode);
+  outfitSlugs.forEach(s => fd.append('product_slugs', s));
+
+  // Step 1: enqueue — send CSRF in both header and body for maximum compatibility
+  fetch(ENQUEUE_URL, { method: 'POST', body: fd, headers: { 'X-CSRFToken': csrf } })
+    .then(r => {
+      if (r.status === 401) {
+        // Server says not authenticated
+        stopLoading();
+        showError('Please login to try on clothes. <a href="/users/login/?next=/tryon/" class="alert-link">Login here</a>');
+        return null;
+      }
+      if (!r.ok) {
+        return r.json().catch(() => null).then(data => {
+          stopLoading();
+          showError((data && data.error) || `Server error (${r.status}). Please try again.`);
+          return null;
+        });
+      }
+      return r.json();
+    })
+    .then(data => {
+      if (!data) return;  // already handled above
+      if (!data.success) {
+        stopLoading();
+        showError(data.error || 'Could not start the try-on. Please try again.');
+        return;
+      }
+      // Step 2: start polling
+      pollStatus(data.task_id);
+    })
+    .catch(err => {
+      console.error('VTON fetch error:', err);
+      stopLoading();
+      showError('Network error while submitting. Check your connection and try again.');
+    });
+}
+
+function pollStatus(taskId) {
+  const url = STATUS_BASE.replace('TASK_ID', taskId);
+  _pollTimer = setTimeout(function tick() {
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (data.state === 'PENDING') {
+          document.getElementById('loadingHeadline').textContent = 'Waiting in queue…';
+          _pollTimer = setTimeout(tick, POLL_MS);
+        }
+        else if (data.state === 'PROGRESS') {
+          const i = (data.step || 1) - 1;
+          if (data.step === 0) {
+            // Connecting to HF Space — show a dedicated status
+            document.getElementById('loadingHeadline').textContent = 'Connecting to AI server…';
+            const list = document.getElementById('stepList');
+            if (!document.getElementById('srow-connecting')) {
+              list.innerHTML = `<div class="step-row s-active" id="srow-connecting">
+                <span class="s-icon"><i class="fas fa-circle-notch fa-spin"></i></span>
+                <span class="s-label">Waking up the AI model (may take ~30 s)…</span>
+              </div>` + list.innerHTML;
+            }
+          } else {
+            // Remove connecting row once actual steps start
+            const cr = document.getElementById('srow-connecting');
+            if (cr) cr.remove();
+            // Mark previous steps done
+            for (let j = 0; j < i; j++) setStepDone(j, '');
+            setStepActive(i);
+          }
+          _pollTimer = setTimeout(tick, POLL_MS);
+        }
+        else if (data.state === 'SUCCESS') {
+          // Mark all steps done
+          outfitSlugs.forEach((_, i) => setStepDone(i, ''));
+          setFinalActive();
+          document.getElementById('loadingHeadline').textContent = 'Your outfit is ready!';
+          setTimeout(() => {
+            stopLoading();
+            showResult(data.result_url);
+          }, 700);
+        }
+        else {
+          // FAILURE or other
+          stopLoading();
+          const stepInfo = data.step_failed ? ` (failed at step ${data.step_failed})` : '';
+          showError((data.error || 'The AI could not process your request.') + stepInfo);
+        }
+      })
+      .catch(() => {
+        // Network blip — keep polling
+        _pollTimer = setTimeout(tick, POLL_MS * 2);
+      });
+  }, POLL_MS);
+}
+
+function stopLoading() {
+  stopTimer();
+  clearTimeout(_pollTimer);
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+  const btn = document.getElementById('tryOnBtn');
+  if (btn) btn.disabled = !personFile || !outfitSlugs.length;
+}
+
+// ── Result ───────────────────────────────────────────────────────────────────
+function showResult(url) {
+  document.getElementById('beforeImg').src = URL.createObjectURL(personFile);
+  document.getElementById('resultImg').src = url;
+  document.getElementById('downloadBtn').href = url;
+  const sec = document.getElementById('resultSection');
+  sec.classList.add('visible');
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Reset ────────────────────────────────────────────────────────────────────
+function resetTryOn() {
+  personFile = null; outfitSlugs = []; outfitMeta = {};
+  document.getElementById('personPreview').style.display = 'none';
+  document.getElementById('uploadPlaceholder').style.display = 'flex';
+  document.getElementById('photoInput').value = '';
+  document.querySelectorAll('.garment-card').forEach(c => c.classList.remove('selected'));
+  refreshTray();
+  document.getElementById('resultSection').classList.remove('visible');
+  dismissError(); updateBtn();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Error ────────────────────────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('errorMsg').innerHTML = msg;
+  const b = document.getElementById('errorBanner');
+  b.style.setProperty('display', 'block', 'important');
+  b.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function dismissError() {
+  document.getElementById('errorBanner').style.setProperty('display', 'none', 'important');
+}
+
+// ── Clear stale errors on every page load/restore (bfcache fix) ──────────────
+// Handled by inline script above the error banner — nothing needed here.
+</script>
+{% endblock %}

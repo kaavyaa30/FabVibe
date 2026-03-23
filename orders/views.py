@@ -10,23 +10,26 @@ from .models import Order, OrderItem
 from .tasks import (
     send_order_confirmation_email, send_order_confirmation_sms,
     send_order_status_update_email, send_order_status_update_sms,
-    send_delivery_otp_sms, send_shipped_sms,
+    send_delivery_otp_email, send_delivery_otp_sms, send_shipped_sms,
 )
 
 def _fire(task, *args):
-    """Call a Celery task if broker is available, otherwise run synchronously."""
+    """Call a Celery task if broker is available, otherwise run in a background thread."""
+    import threading
     try:
         task.delay(*args)
     except Exception:
-        try:
-            task(*args)
-        except Exception:
-            pass
+        def _run():
+            try:
+                task(*args)
+            except Exception:
+                pass
+        threading.Thread(target=_run, daemon=True).start()
 from products.inventory_service import InventoryService
 from decimal import Decimal
 
 
-def create_order_from_cart(user, cart, address, payment_method, subtotal, tax, shipping_charge, total, payment_status='pending'):
+def create_order_from_cart(user, cart, address, payment_method, subtotal, tax, shipping_charge, total, payment_status='pending', wallet_amount=0):
     """Helper function to create an order from cart"""
     import random
     from django.utils import timezone
@@ -54,6 +57,8 @@ def create_order_from_cart(user, cart, address, payment_method, subtotal, tax, s
         status='pending',
         delivery_otp=delivery_otp,
         otp_sent_at=timezone.now(),
+        estimated_delivery_date=(timezone.now() + timezone.timedelta(days=3)).date(),
+        wallet_amount_used=Decimal(str(wallet_amount)),
     )
     
     # Create order items from cart items
@@ -190,6 +195,8 @@ def payment_method_selection(request):
     price_breakdown = calculator.get_price_breakdown()
 
     # Build context up front so it's available in both GET and POST error paths
+    from wallet.services import get_or_create_wallet
+    wallet = get_or_create_wallet(request.user)
     context = {
         'address': address,
         'cart': cart,
@@ -200,6 +207,7 @@ def payment_method_selection(request):
         'discount': price_breakdown['discount'],
         'total': price_breakdown['total'],
         'suppress_global_messages': True,
+        'wallet_balance': wallet.balance,
     }
 
     # Handle payment method selection
@@ -244,6 +252,10 @@ def payment_method_selection(request):
                     _fire(send_order_confirmation_email, order.id)
                     _fire(send_order_confirmation_sms, order.id)
 
+                    # Auto-advance to out_for_delivery after ~60s (fast delivery test)
+                    from orders.tasks import auto_advance_order_to_delivery
+                    _fire(auto_advance_order_to_delivery, order.id)
+
                     # Clear cart after order creation
                     cart.items.all().delete()
 
@@ -277,6 +289,16 @@ def payment_method_selection(request):
                         context['inventory_errors'] = inventory_errors
                         return render(request, 'orders/payment_method.html', context)
 
+                    # Wallet split payment
+                    wallet_deduction = Decimal(str(request.session.get('wallet_deduction', 0)))
+                    # Also check POST field (set by JS)
+                    post_deduction = Decimal(str(request.POST.get('wallet_deduction', 0) or 0))
+                    if post_deduction > 0:
+                        wallet_deduction = post_deduction
+                    from wallet.services import get_or_create_wallet, debit_wallet_for_order
+                    wallet = get_or_create_wallet(request.user)
+                    wallet_deduction = min(wallet_deduction, wallet.balance, price_breakdown['total'])
+
                     order = create_order_from_cart(
                         user=request.user,
                         cart=cart,
@@ -286,16 +308,21 @@ def payment_method_selection(request):
                         tax=price_breakdown['tax'],
                         shipping_charge=price_breakdown['shipping'],
                         total=price_breakdown['total'],
-                        payment_status='completed'
+                        payment_status='completed',
+                        wallet_amount=wallet_deduction,
                     )
+
+                    # Debit wallet if used
+                    if wallet_deduction > 0:
+                        debit_wallet_for_order(request.user, wallet_deduction, order)
 
                     _fire(send_order_confirmation_email, order.id)
                     _fire(send_order_confirmation_sms, order.id)
 
                     cart.items.all().delete()
 
-                    if 'selected_address_id' in request.session:
-                        del request.session['selected_address_id']
+                    for key in ('selected_address_id', 'wallet_deduction'):
+                        request.session.pop(key, None)
 
                     return redirect('orders:order_confirmation', order_id=order.id)
 
@@ -396,34 +423,42 @@ def order_detail(request, order_id):
     }
     return render(request, 'orders/order_detail.html', context)
 
-@login_required
 def track_order(request, order_id):
-    """Order tracking view"""
-    order = get_object_or_404(Order, id=order_id, user=request.user)
-    
+    """Order tracking view — public via email link, login required for other users' orders."""
+    if request.user.is_authenticated:
+        order = get_object_or_404(Order, id=order_id, user=request.user)
+    else:
+        # Allow unauthenticated access via direct link (e.g. from email)
+        order = get_object_or_404(Order, id=order_id)
+
     # Define status progression
     status_steps = [
-        {'key': 'pending', 'label': 'Order Placed', 'icon': 'check-circle'},
-        {'key': 'processing', 'label': 'Processing', 'icon': 'clock'},
-        {'key': 'shipped', 'label': 'Shipped', 'icon': 'truck'},
-        {'key': 'out_for_delivery', 'label': 'Out for Delivery', 'icon': 'map-marker'},
-        {'key': 'delivered', 'label': 'Delivered', 'icon': 'check-circle'},
+        {'key': 'pending',           'label': 'Order Placed'},
+        {'key': 'processing',        'label': 'Processing'},
+        {'key': 'shipped',           'label': 'Shipped'},
+        {'key': 'out_for_delivery',  'label': 'Out for Delivery'},
+        {'key': 'delivered',         'label': 'Delivered'},
     ]
-    
-    # Mark completed steps
+
+    # Mark completed / current steps
     status_order = ['pending', 'processing', 'shipped', 'out_for_delivery', 'delivered']
+    progress_pct = 0
+    pct_map = {'pending': 10, 'processing': 30, 'shipped': 55, 'out_for_delivery': 80, 'delivered': 100}
     try:
         current_index = status_order.index(order.status)
+        progress_pct  = pct_map.get(order.status, 0)
         for i, step in enumerate(status_steps):
             step['completed'] = i <= current_index
-            step['current'] = i == current_index
+            step['current']   = i == current_index
     except ValueError:
-        # Handle cancelled status
-        pass
-    
+        for step in status_steps:
+            step['completed'] = False
+            step['current']   = False
+
     context = {
-        'order': order,
+        'order':        order,
         'status_steps': status_steps,
+        'progress_pct': progress_pct,
     }
     return render(request, 'orders/track_order.html', context)
 
@@ -620,6 +655,36 @@ def order_confirmation(request, order_id):
     return render(request, 'orders/order_confirmation.html', context)
 
 
+@login_required
+def cancel_order(request, order_id):
+    """Cancel a pending/processing order and refund to wallet."""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if order.status not in ('pending', 'processing'):
+        messages.error(request, 'Only pending or processing orders can be cancelled.')
+        return redirect('orders:order_detail', order_id=order_id)
+
+    if request.method == 'POST':
+        from django.utils import timezone
+        order.status = 'cancelled'
+        order.save(update_fields=['status', 'updated_at'])
+
+        # Refund to wallet if payment was completed
+        if order.payment_status == 'completed':
+            try:
+                from wallet.services import refund_to_wallet
+                refund_to_wallet(order, reason="Cancellation refund")
+                messages.success(request, f'Order cancelled. ₹{order.total_amount} refunded to your wallet.')
+            except Exception:
+                messages.success(request, 'Order cancelled successfully.')
+        else:
+            messages.success(request, 'Order cancelled successfully.')
+
+        return redirect('orders:order_detail', order_id=order_id)
+
+    return render(request, 'orders/cancel_order.html', {'order': order})
+
+
 def confirm_delivery(request, order_id):
     """
     Delivery agent OTP confirmation view.
@@ -643,18 +708,116 @@ def confirm_delivery(request, order_id):
             order.delivered_at = timezone.now()
             order.save(update_fields=['otp_verified', 'status', 'delivered_at'])
 
+            # Award cashback to wallet
+            try:
+                from wallet.services import award_cashback
+                award_cashback(order)
+            except Exception:
+                pass
+
             # Send delivered SMS/email
             _fire(send_order_status_update_email, order.id)
             _fire(send_order_status_update_sms, order.id)
 
-            return render(request, 'orders/confirm_delivery.html', {
-                'order': order,
-                'success': True,
-            })
+            messages.success(request, f'🎉 Order {order.order_id} delivered successfully! Thank you for shopping with FabVibe.')
+            return redirect('orders:track_order', order_id=order.id)
         else:
-            error = 'Invalid OTP. Please try again.'
+            messages.error(request, 'Invalid OTP. Please try again.')
+            return redirect('orders:track_order', order_id=order.id)
 
-    return render(request, 'orders/confirm_delivery.html', {
-        'order': order,
-        'error': error,
+
+@login_required
+def send_delivery_otp_view(request, order_id):
+    """
+    Manually resend the delivery OTP for an order.
+    Generates a fresh OTP, saves it to the order and the session,
+    then sends it via Brevo.
+
+    POST  /orders/send-otp/<order_id>/
+    Returns JSON: {success, message}
+    """
+    from django.http import JsonResponse
+    from django.utils import timezone
+    from utils import generate_otp, send_otp_email
+
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'POST required.'}, status=405)
+
+    # Generate fresh OTP
+    otp = generate_otp()
+    order.delivery_otp = otp
+    order.otp_sent_at = timezone.now()
+    order.save(update_fields=['delivery_otp', 'otp_sent_at'])
+
+    # Also store in session as a quick reference
+    request.session[f'delivery_otp_{order.order_id}'] = otp
+
+    user_name = request.user.get_full_name() or request.user.email
+    ok = send_otp_email(
+        to_email=request.user.email,
+        to_name=user_name,
+        otp=otp,
+    )
+
+    if ok:
+        return JsonResponse({'success': True, 'message': f'OTP sent to {request.user.email}.'})
+    return JsonResponse({'success': False, 'message': 'Could not send OTP. Please try again.'}, status=500)
+
+
+def deliver_order(request):
+    """
+    Delivery executive portal — no login required.
+    Executive enters Order ID + customer OTP.
+    On match: order → delivered, cashback awarded, customer notified.
+    URL: /orders/deliver/
+    """
+    from django.utils import timezone
+
+    result  = None   # 'success' | 'error' | 'already'
+    order   = None
+    error   = None
+
+    if request.method == 'POST':
+        raw_id  = request.POST.get('order_id', '').strip().upper()
+        entered = request.POST.get('otp', '').strip()
+
+        # Look up by order_id string (e.g. "ORD-ABCD1234")
+        try:
+            order = Order.objects.select_related('user').get(order_id=raw_id)
+        except Order.DoesNotExist:
+            error = f'Order "{raw_id}" not found. Please check the Order ID and try again.'
+            return render(request, 'orders/deliver_order.html', {'error': error})
+
+        if order.otp_verified or order.status == 'delivered':
+            result = 'already'
+        elif not order.delivery_otp:
+            error = 'No OTP has been generated for this order yet.'
+        elif entered != order.delivery_otp:
+            error = 'Incorrect OTP. Please ask the customer to check their email and try again.'
+        else:
+            # ✅ OTP matches — mark delivered
+            order.otp_verified = True
+            order.status       = 'delivered'
+            order.delivered_at = timezone.now()
+            order.save(update_fields=['otp_verified', 'status', 'delivered_at', 'updated_at'])
+
+            # Award cashback
+            try:
+                from wallet.services import award_cashback
+                award_cashback(order)
+            except Exception:
+                pass
+
+            # Notify customer
+            _fire(send_order_status_update_email, order.id)
+            _fire(send_order_status_update_sms,   order.id)
+
+            result = 'success'
+
+    return render(request, 'orders/deliver_order.html', {
+        'result': result,
+        'order':  order,
+        'error':  error,
     })

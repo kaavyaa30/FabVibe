@@ -6,243 +6,263 @@
 
 {% block extra_css %}
 <style>
-    /* Enhanced Breadcrumb Design */
-    .category-breadcrumb {
-        background: transparent;
-        border: none;
-        padding: 0.5rem 0;
-        margin-bottom: 1rem;
-    }
-    
-    .category-breadcrumb .breadcrumb {
-        margin: 0;
-        background: transparent;
-        padding: 0;
-        border: none;
-        box-shadow: none;
-    }
-    
-    .category-breadcrumb .breadcrumb-item {
-        font-size: 1.3rem;
-        font-weight: 500;
-    }
-    
-    .category-breadcrumb .breadcrumb-item a {
-        color: #456273;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .category-breadcrumb .breadcrumb-item a:hover {
-        color: #4e6a7a;
-        transform: translateX(2px);
-    }
-    
-    .category-breadcrumb .breadcrumb-item.active {
-        color: #2c3e50;
-        font-weight: 600;
-        font-size: 1.3rem;
-    }
-    
-    .category-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
-        content: "›";
-        color: #95a5a6;
-        font-size: 1.2rem;
-        font-weight: 400;
-    }
-    
-    /* Enhanced Page Header */
-    .category-page-header {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e9ecef;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .category-page-header::before,
-    .category-page-header::after {
-        display: none;
-    }
-    
-    .category-header-content {
-        position: relative;
-        z-index: 1;
-    }
-    
-    .category-title {
-        color: #2c3e50;
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .category-title-icon {
-        font-size: 1.25rem;
-        color: #456273;
-    }
-    
-    .category-description {
-        color: #5a6c7d;
-        font-size: 1.1rem;
-        margin-bottom: 1.5rem;
-        line-height: 1.6;
-    }
-    
-    .category-stats {
-        display: flex;
-        gap: 2rem;
-        flex-wrap: wrap;
-    }
-    
-    .category-stat-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        background: #ffffff;
-        padding: 0.75rem 1.5rem;
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(74, 37, 69, 0.2);
-    }
-    
-    .category-stat-icon {
-        width: 40px;
-        height: 40px;
-        background: rgba(74, 37, 69, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.1rem;
-        color: #456273;
-    }
-    
-    .category-stat-content {
-        color: #2c3e50;
-    }
-    
-    .category-stat-label {
-        font-size: 0.85rem;
-        opacity: 0.9;
-        display: block;
-        margin-bottom: 0.15rem;
-    }
-    
-    .category-stat-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        display: block;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .category-breadcrumb {
-            padding: 0.5rem 0;
-        }
-        
-        .category-page-header {
-            padding: 1.5rem;
-        }
-        
-        .category-title {
-            font-size: 1.1rem;
-        }
-        
-        .category-title-icon {
-            font-size: 1.1rem;
-        }
-        
-        .category-description {
-            font-size: 1rem;
-        }
-        
-        .category-stats {
-            gap: 1rem;
-        }
-        
-        .category-stat-item {
-            padding: 0.6rem 1rem;
-        }
-    }
+/* ── Category Banner — contained, centered, dark ─────────────────────────── */
+.cat-banner {
+    background: linear-gradient(120deg, #1a2b38 0%, #243d4f 50%, #2e5060 100%);
+    border-radius: 14px;
+    padding: 2rem 2rem 0;
+    margin-bottom: 0;
+    position: relative;
+    overflow: hidden;
+}
+.cat-banner::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.04);
+    pointer-events: none;
+}
+
+/* Photo bg variant */
+.cat-banner.has-image {
+    background-image: var(--cat-img);
+    background-size: cover;
+    background-position: center;
+}
+.cat-banner.has-image .cat-banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(26,43,56,.92) 0%, rgba(46,80,96,.85) 100%);
+    border-radius: 14px;
+}
+.cat-banner-inner {
+    position: relative;
+    z-index: 2;
+}
+
+/* ── Breadcrumb ──────────────────────────────────────────────────────────── */
+.cat-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    font-size: .72rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+    margin-bottom: .75rem;
+    flex-wrap: wrap;
+}
+.cat-breadcrumb a { color: rgba(255,255,255,.6); text-decoration: none; transition: color .15s; }
+.cat-breadcrumb a:hover { color: #fff; }
+.cat-breadcrumb .sep { color: rgba(255,255,255,.25); margin: 0 .15rem; }
+.cat-breadcrumb .current { color: rgba(255,255,255,.9); font-weight: 600; }
+
+/* ── Centered title block ────────────────────────────────────────────────── */
+.cat-title-center {
+    text-align: center;
+    padding: .5rem 0 1.25rem;
+}
+.cat-eyebrow {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+    margin-bottom: .4rem;
+}
+.cat-banner-title {
+    font-size: clamp(1.9rem, 4vw, 2.8rem);
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -.5px;
+    margin: 0 0 .75rem;
+    line-height: 1.1;
+}
+
+/* ── Stat chips — centered row ───────────────────────────────────────────── */
+.cat-stats {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+.cat-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 50px;
+    padding: .3rem .85rem;
+    color: rgba(255,255,255,.9);
+    font-size: .78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.cat-stat-chip i { font-size: .68rem; opacity: .75; }
+
+/* ── Subcategory tab strip ───────────────────────────────────────────────── */
+.cat-tab-strip {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    justify-content: center;
+    border-top: 1px solid rgba(255,255,255,.1);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.cat-tab-strip::-webkit-scrollbar { display: none; }
+.cat-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .65rem 1.2rem;
+    font-size: .8rem;
+    font-weight: 600;
+    color: rgba(255,255,255,.6);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+}
+.cat-tab:hover { color: #fff; border-bottom-color: rgba(255,255,255,.5); }
+.cat-tab.active { color: #fff; border-bottom-color: #fff; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.products-toolbar-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #e8ecef;
+    border-radius: 10px;
+    padding: .55rem 1rem;
+    box-shadow: 0 1px 4px rgba(44,62,80,.06);
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+.toolbar-count { font-size: .83rem; color: #6b7c8d; }
+.toolbar-count strong { color: #1e2d3d; font-weight: 700; }
+.toolbar-sort { display: flex; align-items: center; gap: .4rem; font-size: .82rem; color: #6b7c8d; }
+.toolbar-sort .form-select {
+    border-radius: 8px; border: 1px solid #dde2e7; font-size: .81rem;
+    padding: .28rem .65rem; color: #1e2d3d; box-shadow: none; width: auto; min-width: 150px;
+}
+.toolbar-sort .form-select:focus { border-color: #456273; box-shadow: 0 0 0 3px rgba(69,98,115,.1); }
+
+/* ── Content area ────────────────────────────────────────────────────────── */
+.cat-content-area { margin-top: 1.25rem; }
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.bg-custom-primary { background: linear-gradient(135deg,#456273 0%,#3d5a6b 100%) !important; }
+.btn-primary { background: linear-gradient(135deg,#456273 0%,#3d5a6b 100%); border:none; color:#fff !important; }
+.btn-primary:hover { background: linear-gradient(135deg,#3d5a6b 0%,#2c4a5a 100%); transform:translateY(-2px); box-shadow:0 4px 12px rgba(69,98,115,.4); }
+.btn-outline-primary { color:#2c3e50; border-color:#456273; }
+.btn-outline-primary:hover { color:#fff !important; background:linear-gradient(135deg,#456273 0%,#3d5a6b 100%); border-color:#456273; }
+.filters-sidebar .card { border-radius:14px; border:1px solid #e8ecef; }
+.filters-sidebar .card-header { border-radius:14px 14px 0 0 !important; background:linear-gradient(135deg,#456273 0%,#3d5a6b 100%) !important; color:#fff !important; }
+.filters-sidebar .card-header *, .filters-sidebar .card-header h5 { color:#fff !important; }
+.filter-options { max-height:200px; overflow-y:auto; padding-right:.5rem; }
+.filter-options::-webkit-scrollbar { width:5px; }
+.filter-options::-webkit-scrollbar-track { background:#f1f1f1; border-radius:3px; }
+.filter-options::-webkit-scrollbar-thumb { background:#456273; border-radius:3px; }
+.form-check-input:checked { background-color:#456273; border-color:#456273; }
+
+/* ── Product cards ───────────────────────────────────────────────────────── */
+.product-card { transition:all .25s cubic-bezier(.4,0,.2,1); border-radius:14px; background:#fff; border:1px solid #e8ecef; }
+.product-card:hover { transform:translateY(-5px); box-shadow:0 12px 28px rgba(30,45,61,.13) !important; border-color:#c8d4db; }
+.product-card img { height:270px; object-fit:cover; transition:transform .3s ease; background:#f5f7f9; }
+.product-card:hover img { transform:scale(1.04); }
+.product-card .card-footer { border-top:1px solid rgba(0,0,0,.05); }
+.wishlist-btn-card { position:absolute; top:12px; right:12px; z-index:10; background-color:rgba(255,255,255,.92); border:none; border-radius:50%; width:40px; height:40px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px rgba(0,0,0,.12); cursor:pointer; transition:all .25s ease; }
+.wishlist-btn-card:hover { transform:scale(1.12); box-shadow:0 4px 12px rgba(0,0,0,.2); background-color:#ef4444; }
+.wishlist-btn-card:hover i { color:#fff !important; }
+.wishlist-btn-card i { font-size:18px; color:#ef4444; transition:all .25s ease; }
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pagination { gap:6px; }
+.page-link { border:1.5px solid #dde2e7; color:#456273; border-radius:8px; padding:.45rem .9rem; font-weight:600; transition:all .2s ease; }
+.page-link:hover { background-color:#456273; border-color:#456273; color:#fff; transform:translateY(-1px); }
+.page-item.active .page-link { background:linear-gradient(135deg,#456273 0%,#3d5a6b 100%); border-color:#456273; box-shadow:0 3px 10px rgba(69,98,115,.3); }
+.page-item.disabled .page-link { background-color:#f8f9fa; border-color:#e0e0e0; color:#aab4bc; }
+.no-products-found .card { border-radius:14px; border:1px solid #e8ecef; }
+
+@media (max-width:768px) {
+    .cat-banner { padding:1.5rem 1rem 0; border-radius:10px; }
+    .cat-banner-title { font-size:1.6rem; }
+    .products-toolbar-bar { flex-direction:column; align-items:flex-start; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container my-4">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="category-breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'products:home' %}">Home</a>
-            </li>
-            {% if category.parent %}
-            <li class="breadcrumb-item">
-                <a href="{% url 'products:category_products' category.parent.slug %}">{{ category.parent.name }}</a>
-            </li>
-            {% endif %}
-            <li class="breadcrumb-item active" aria-current="page">{{ category.name }}</li>
-        </ol>
+<!-- ── Category Banner ── -->
+<div class="cat-banner {% if category.image %}has-image{% endif %}"
+     {% if category.image %}style="--cat-img: url('{{ category.image.url }}')"{% endif %}>
+  {% if category.image %}<div class="cat-banner-overlay"></div>{% endif %}
+  <div class="cat-banner-inner">
+
+    <!-- Breadcrumb — centered -->
+    <nav class="cat-breadcrumb justify-content-center" aria-label="breadcrumb">
+      <a href="{% url 'products:home' %}">Home</a>
+      {% if category.parent %}
+        <span class="sep">/</span>
+        <a href="{% url 'products:category_products' category.parent.slug %}">{{ category.parent.name }}</a>
+      {% endif %}
+      <span class="sep">/</span>
+      <span class="current">{{ category.name }}</span>
     </nav>
 
-    <!-- Single Merged Category Info Card -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-
-                <!-- Left: Shop by Category links -->
-                <div>
-                    {% if not category.parent %}
-                    {% with subcategories=category.subcategories.all %}
-                    {% if subcategories %}
-                    <div>
-                        <h5 class="mb-3 fw-semibold"><i class="fas fa-th-large me-2 text-secondary"></i>Shop by Category</h5>
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for subcategory in subcategories %}
-                            {% if subcategory.is_active %}
-                            <a href="{% url 'products:category_products' subcategory.slug %}"
-                               class="btn btn-outline-primary">
-                                {{ subcategory.name }}
-                            </a>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% endwith %}
-                    {% endif %}
-                </div>
-
-                <!-- Right: Category name above stats -->
-                <div class="d-flex flex-column align-items-end gap-2">
-                    <h5 class="fw-semibold mb-1">
-                        <i class="fas fa-shopping-bag me-2 text-secondary"></i>{{ category.name }}
-                    </h5>
-                    <div class="d-flex gap-3">
-                        <div class="text-center px-3 py-2 rounded border">
-                            <div class="small text-muted">Products</div>
-                            <div class="fw-bold fs-5">{{ page_obj.paginator.count }}</div>
-                        </div>
-                        {% if not category.parent and category.subcategories.all %}
-                        <div class="text-center px-3 py-2 rounded border">
-                            <div class="small text-muted">Subcategories</div>
-                            <div class="fw-bold fs-5">{{ category.subcategories.count }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-            </div>
-        </div>
+    <!-- Centered title + stats -->
+    <div class="cat-title-center">
+      <p class="cat-eyebrow">{% if category.parent %}{{ category.parent.name }} &rsaquo; {% endif %}Collection</p>
+      <h1 class="cat-banner-title">{{ category.name }}</h1>
+      <div class="cat-stats">
+        <span class="cat-stat-chip">
+          <i class="fas fa-layer-group"></i>
+          {{ page_obj.paginator.count }} Product{{ page_obj.paginator.count|pluralize }}
+        </span>
+        {% if not category.parent and category.subcategories.all %}
+        <span class="cat-stat-chip">
+          <i class="fas fa-th"></i>
+          {{ category.subcategories.count }} Subcategor{{ category.subcategories.count|pluralize:"y,ies" }}
+        </span>
+        {% endif %}
+      </div>
     </div>
+
+    <!-- Subcategory tab strip -->
+    {% if not category.parent and category.subcategories.all %}
+    <nav class="cat-tab-strip" aria-label="Subcategories">
+      <a href="{% url 'products:category_products' category.slug %}" class="cat-tab active">All</a>
+      {% for sub in category.subcategories.all %}
+        {% if sub.is_active %}
+        <a href="{% url 'products:category_products' sub.slug %}" class="cat-tab">{{ sub.name }}</a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+    {% elif category.parent %}
+    <nav class="cat-tab-strip" aria-label="Subcategories">
+      <a href="{% url 'products:category_products' category.parent.slug %}" class="cat-tab">All</a>
+      {% for sub in category.parent.subcategories.all %}
+        {% if sub.is_active %}
+        <a href="{% url 'products:category_products' sub.slug %}"
+           class="cat-tab {% if sub.slug == category.slug %}active{% endif %}">{{ sub.name }}</a>
+        {% endif %}
+      {% endfor %}
+    </nav>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Content sits inside the normal container flow -->
+<div class="cat-content-area">
 
     <div class="row">
         <!-- Filters Sidebar -->
@@ -344,36 +364,26 @@
 
         <!-- Products Section -->
         <div class="col-lg-9">
-            <!-- Sorting and Product Count -->
-            <div class="products-toolbar mb-4">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body p-3">
-                        <div class="row align-items-center">
-                            <div class="col-md-6 mb-2 mb-md-0">
-                                <p class="mb-0 text-muted">
-                                    <strong>Showing {{ page_obj.start_index }}-{{ page_obj.end_index }}</strong> of <strong>{{ page_obj.paginator.count }}</strong> products
-                                </p>
-                            </div>
-                            <div class="col-md-6">
-                                <form method="get" class="d-flex justify-content-md-end align-items-center">
-                                    <!-- Preserve filters in sort form -->
-                                    {% if min_price %}<input type="hidden" name="min_price" value="{{ min_price }}">{% endif %}
-                                    {% if max_price %}<input type="hidden" name="max_price" value="{{ max_price }}">{% endif %}
-                                    {% for size in selected_sizes %}<input type="hidden" name="size" value="{{ size }}">{% endfor %}
-                                    {% for color in selected_colors %}<input type="hidden" name="color" value="{{ color }}">{% endfor %}
-                                    {% for brand in selected_brands %}<input type="hidden" name="brand" value="{{ brand }}">{% endfor %}
-                                    
-                                    <label class="me-2 mb-0 text-muted"><i class="fas fa-sort me-1"></i>Sort by:</label>
-                                    <select name="sort" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
-                                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
-                                        <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>Price: Low to High</option>
-                                        <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
-                                    </select>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Compact toolbar: count + sort -->
+            <div class="products-toolbar-bar">
+              <span class="toolbar-count">
+                Showing <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong>
+                of <strong>{{ page_obj.paginator.count }}</strong> products
+              </span>
+              <form method="get" class="toolbar-sort">
+                {% if min_price %}<input type="hidden" name="min_price" value="{{ min_price }}">{% endif %}
+                {% if max_price %}<input type="hidden" name="max_price" value="{{ max_price }}">{% endif %}
+                {% for size in selected_sizes %}<input type="hidden" name="size" value="{{ size }}">{% endfor %}
+                {% for color in selected_colors %}<input type="hidden" name="color" value="{{ color }}">{% endfor %}
+                {% for brand in selected_brands %}<input type="hidden" name="brand" value="{{ brand }}">{% endfor %}
+                <i class="fas fa-sort" style="opacity:.5"></i>
+                <label class="mb-0">Sort by:</label>
+                <select name="sort" class="form-select" onchange="this.form.submit()">
+                  <option value="newest"     {% if sort_by == 'newest'     %}selected{% endif %}>Newest First</option>
+                  <option value="price_low"  {% if sort_by == 'price_low'  %}selected{% endif %}>Price: Low to High</option>
+                  <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                </select>
+              </form>
             </div>
 
             <!-- Products Grid -->
@@ -388,7 +398,7 @@
                         </button>
                         <a href="{% url 'products:product_detail' product.slug %}" class="text-decoration-none">
                             {% if product.images.all %}
-                            <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                            <img src="{{ product.images.all.0.image.url }}" class="card-img-top" alt="{{ product.name }}">
                             {% else %}
                             <img src="https://via.placeholder.com/320x320?text=No+Image" class="card-img-top" alt="{{ product.name }}">
                             {% endif %}
@@ -500,291 +510,7 @@
             {% endif %}
         </div>
     </div>
-</div>
-
-<style>
-/* Category Page Specific Styles */
-.bg-custom-primary {
-    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%) !important;
-}
-.btn-primary {
-    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
-    border: none;
-    color: white !important;
-}
-.btn-primary:hover {
-    background: linear-gradient(135deg, #3d5a6b 0%, #2c4a5a 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(69, 98, 115, 0.4);
-}
-.btn-outline-primary {
-    color: #2c3e50;
-    border-color: #456273;
-}
-.btn-outline-primary:hover {
-    color: white !important;
-    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
-    border-color: #456273;
-}
-.subcategories-section .btn-outline-primary {
-    border-width: 2px;
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    transition: all 0.3s ease;
-}
-
-.subcategories-section .btn-outline-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 37, 69, 0.3);
-}
-
-/* Ensure proper row layout */
-.row {
-    display: flex;
-    flex-wrap: wrap;
-    margin-right: -0.75rem;
-    margin-left: -0.75rem;
-}
-
-.col-lg-3,
-.col-lg-9 {
-    position: relative;
-    width: 100%;
-    padding-right: 0.75rem;
-    padding-left: 0.75rem;
-}
-
-@media (min-width: 992px) {
-    .col-lg-3 {
-        flex: 0 0 25%;
-        max-width: 25%;
-    }
-    
-    .col-lg-9 {
-        flex: 0 0 75%;
-        max-width: 75%;
-    }
-}
-
-.filters-sidebar {
-    position: relative;
-}
-
-.filters-sidebar .card {
-    border-radius: 16px;
-    border: 1px solid #e0e0e0;
-}
-
-.filters-sidebar .card-header {
-    border-radius: 16px 16px 0 0 !important;
-    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%) !important;
-}
-
-.filter-options {
-    max-height: 200px;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-}
-
-.filter-options::-webkit-scrollbar {
-    width: 6px;
-}
-
-.filter-options::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.filter-options::-webkit-scrollbar-thumb {
-    background: #456273;
-    border-radius: 3px;
-}
-
-.filter-options::-webkit-scrollbar-thumb:hover {
-    background: #4e6a7a;
-}
-
-.form-check-input:checked {
-    background-color: #456273;
-    border-color: #456273;
-}
-
-.products-toolbar {
-    position: relative;
-    z-index: 1;
-}
-
-.products-toolbar .card {
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
-}
-
-.product-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 16px;
-    background: white;
-    border: 1px solid #e0e0e0;
-}
-
-.product-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(74, 37, 69, 0.15) !important;
-    border-color: rgba(74, 37, 69, 0.5);
-}
-
-.product-card img {
-    height: 280px;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-    background: #f8f9fa;
-}
-
-.product-card:hover img {
-    transform: scale(1.03);
-}
-
-.product-card .card-footer {
-    border-top: 1px solid rgba(0,0,0,0.05);
-}
-
-.wishlist-btn-card {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    z-index: 10;
-    background-color: #2c3e50;
-    border: none;
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.wishlist-btn-card:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    background-color: #ef4444;
-}
-
-.wishlist-btn-card:hover i {
-    color: white !important;
-}
-
-.wishlist-btn-card i {
-    font-size: 20px;
-    color: #ef4444;
-    transition: all 0.3s ease;
-}
-
-.no-products-found .card {
-    border-radius: 16px;
-    border: 1px solid #e0e0e0;
-}
-
-.pagination {
-    gap: 8px;
-}
-
-.page-link {
-    border: 2px solid #e0e0e0;
-    color: #456273;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.page-link:hover {
-    background-color: #456273;
-    border-color: #456273;
-    color: #2c3e50;
-    transform: translateY(-2px);
-}
-
-.page-item.active .page-link {
-    background: linear-gradient(135deg, #456273 0%, #3d5a6b 100%);
-    border-color: #456273;
-    box-shadow: 0 4px 12px rgba(69, 98, 115, 0.3);
-}
-
-.page-item.disabled .page-link {
-    background-color: #f8f9fa;
-    border-color: #e0e0e0;
-    color: #7f8c8d;
-}
-
-/* Ensure products section is visible and positioned correctly */
-.col-lg-9 {
-    position: relative;
-    min-height: 400px;
-    display: block;
-}
-
-/* Page Header Styling */
-.page-header {
-    background: white;
-    padding: 2rem 0;
-    margin-bottom: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.page-header h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-}
-
-.page-header .lead {
-    font-size: 1.125rem;
-    color: #7f8c8d;
-}
-
-/* Breadcrumb Styling */
-.breadcrumb {
-    background-color: #2c3e50;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    margin-bottom: 1.5rem;
-}
-
-.breadcrumb-item a {
-    color: #456273;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-.breadcrumb-item a:hover {
-    color: #4e6a7a;
-}
-
-.breadcrumb-item.active {
-    color: #7f8c8d;
-}
-
-/* Subcategories Section */
-.subcategories-section .card {
-    border: 1px solid #e0e0e0;
-    border-radius: 16px;
-}
-
-.subcategories-section .card-body {
-    padding: 2rem;
-}
-
-.subcategories-section h5 {
-    color: #2c3e50;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-}
-</style>
+</div><!-- /cat-content-area -->
 {% endblock %}
 
 {% block extra_js %}

@@ -451,19 +451,60 @@ def update_order_status(request, order_id):
             order.save()
             
             # Send notification to customer
-            from orders.tasks import send_order_status_update_email, send_order_status_update_sms
-            send_order_status_update_email(order.id)
-            send_order_status_update_sms(order.id)
+            from orders.tasks import (
+                send_order_status_update_email, send_order_status_update_sms,
+                send_shipped_sms,
+            )
+            import threading
+            def _bg(fn, *a):
+                threading.Thread(target=lambda: fn(*a), daemon=True).start()
 
-            # Trigger OTP when out for delivery
+            _bg(send_order_status_update_email, order.id)
+            _bg(send_order_status_update_sms, order.id)
+
+            # On out_for_delivery: generate OTP immediately and send email synchronously
             if new_status == 'out_for_delivery':
-                from orders.tasks import send_delivery_otp_sms
-                send_delivery_otp_sms(order.id)
+                import random
+                otp = str(random.randint(100000, 999999))
+                order.delivery_otp = otp
+                order.otp_sent_at = timezone.now()
+                order.estimated_delivery_date = timezone.now().date()
+                order.save(update_fields=['delivery_otp', 'otp_sent_at', 'estimated_delivery_date'])
 
-            # Trigger shipped SMS with tracking link
+                # Send email immediately (synchronous) so it fires right away
+                try:
+                    from utils import send_brevo_email
+                    from django.template.loader import render_to_string
+                    tracking_url = f"http://172.16.2.168:8000/orders/track-order/{order.id}/"
+                    html = render_to_string('orders/emails/delivery_otp.html', {
+                        'order': order,
+                        'user': order.user,
+                        'otp': otp,
+                        'tracking_url': tracking_url,
+                    })
+                    user_name = order.user.get_full_name() or order.user.email
+                    ok = send_brevo_email(
+                        subject=f'Your Delivery OTP for Order {order.order_id} — FabVibe',
+                        to_email=order.user.email,
+                        html_content=html,
+                        to_name=user_name,
+                    )
+                    if ok:
+                        messages.success(request, f'OTP sent to {order.user.email}.')
+                    else:
+                        messages.warning(request, 'Status updated but OTP email failed — check Brevo config.')
+                except Exception as e:
+                    messages.warning(request, f'Status updated but OTP email error: {e}')
+
+                # Also send SMS in background
+                from orders.tasks import send_delivery_otp_sms
+                _bg(send_delivery_otp_sms, order.id)
+
+            # On shipped: send tracking SMS
             if new_status == 'shipped':
-                from orders.tasks import send_shipped_sms
-                send_shipped_sms(order.id)
+                order.estimated_delivery_date = (timezone.now() + timezone.timedelta(days=3)).date()
+                order.save(update_fields=['estimated_delivery_date'])
+                _bg(send_shipped_sms, order.id)
             
             messages.success(request, f'Order status updated from {old_status} to {new_status}.')
             

@@ -247,23 +247,26 @@
                             </div>
                             
                             <div class="form-group">
-                                <label for="{{ form.email.id_for_label }}">
-                                    Email Address <span class="required-indicator">*</span>
+                                <label for="{{ form.phone_number.id_for_label }}">
+                                    Phone Number <span class="required-indicator">*</span>
                                 </label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                    {% for error in form.email.errors %}
+                                {{ form.phone_number }}
+                                <small class="form-text">Format: +1234567890 (required, must be unique)</small>
+                                {% if form.phone_number.errors %}
+                                    {% for error in form.phone_number.errors %}
                                         <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 {% endif %}
                             </div>
                             
                             <div class="form-group">
-                                <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
-                                {{ form.phone_number }}
-                                <small class="form-text">Format: +1234567890 (optional)</small>
-                                {% if form.phone_number.errors %}
-                                    {% for error in form.phone_number.errors %}
+                                <label for="{{ form.email.id_for_label }}">
+                                    Email Address <span class="required-indicator">*</span>
+                                </label>
+                                {{ form.email }}
+                                <small class="form-text">You can use the same email for multiple accounts</small>
+                                {% if form.email.errors %}
+                                    {% for error in form.email.errors %}
                                         <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
                                 {% endif %}

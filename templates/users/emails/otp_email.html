@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FabVibe — Your OTP Code</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f4f8;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0"
+               style="background:#ffffff;border-radius:16px;overflow:hidden;
+                      box-shadow:0 8px 32px rgba(0,0,0,0.10);max-width:560px;width:100%;">
+
+          <!-- ── Header ── -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#456273 0%,#2c3e50 100%);
+                       padding:36px 40px;text-align:center;">
+              <!-- Logo / Brand -->
+              <div style="display:inline-block;background:rgba(255,255,255,0.12);
+                          border-radius:50%;width:64px;height:64px;line-height:64px;
+                          text-align:center;margin-bottom:14px;">
+                <span style="font-size:28px;">👗</span>
+              </div>
+              <h1 style="margin:0;color:#ffffff;font-size:30px;font-weight:800;
+                         letter-spacing:2px;">FabVibe</h1>
+              <p style="margin:6px 0 0;color:#c8d8e0;font-size:13px;letter-spacing:1px;">
+                Fashion that fits your life
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── Body ── -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+
+              <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#2c3e50;">
+                Hello, {{ user.get_full_name|default:user.email }} 👋
+              </p>
+              <p style="margin:0 0 28px;font-size:15px;color:#666;line-height:1.6;">
+                We received a request to {{ purpose|default:"verify your account" }}.
+                Use the one-time password below to continue.
+              </p>
+
+              <!-- ── OTP Box ── -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <div style="background:linear-gradient(135deg,#f5f9fb,#eaf2f5);
+                                border:2px solid #456273;border-radius:14px;
+                                padding:28px 40px;text-align:center;
+                                box-shadow:0 4px 16px rgba(69,98,115,0.12);">
+                      <p style="margin:0 0 10px;font-size:11px;color:#888;
+                                text-transform:uppercase;letter-spacing:3px;font-weight:600;">
+                        Your One-Time Password
+                      </p>
+                      <p style="margin:0;font-size:48px;font-weight:800;color:#456273;
+                                letter-spacing:12px;font-family:'Courier New',monospace;">
+                        {{ otp }}
+                      </p>
+                      <p style="margin:12px 0 0;font-size:12px;color:#999;">
+                        ⏱ Expires in <strong>10 minutes</strong>
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ── Security Notice ── -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background:#fff8f0;border-left:4px solid #f39c12;
+                             border-radius:0 10px 10px 0;padding:14px 18px;">
+                    <p style="margin:0;font-size:13px;color:#7d5a00;line-height:1.5;">
+                      🔒 <strong>Security tip:</strong> FabVibe will never ask for your OTP
+                      over phone, chat, or email. Do not share this code with anyone.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ── Steps ── -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td style="background:#f8f9fa;border-radius:10px;padding:20px 24px;">
+                    <p style="margin:0 0 12px;font-size:13px;font-weight:700;
+                               color:#456273;text-transform:uppercase;letter-spacing:1px;">
+                      How to use
+                    </p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#555;">
+                          <span style="color:#456273;font-weight:700;margin-right:8px;">1.</span>
+                          Go back to the FabVibe verification page
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#555;">
+                          <span style="color:#456273;font-weight:700;margin-right:8px;">2.</span>
+                          Enter the 6-digit OTP shown above
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-size:13px;color:#555;">
+                          <span style="color:#456273;font-weight:700;margin-right:8px;">3.</span>
+                          Start shopping — your account is ready!
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:14px;color:#999;line-height:1.6;">
+                Didn't request this? You can safely ignore this email.
+                Your account remains secure.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- ── Footer ── -->
+          <tr>
+            <td style="background:#f8f9fa;padding:20px 40px;
+                       border-top:1px solid #eee;text-align:center;">
+              <p style="margin:0 0 6px;font-size:13px;color:#456273;font-weight:700;">
+                FabVibe
+              </p>
+              <p style="margin:0;font-size:11px;color:#bbb;line-height:1.6;">
+                This is an automated email — please do not reply.<br>
+                &copy; 2026 FabVibe. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

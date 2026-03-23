@@ -15,4 +15,7 @@ urlpatterns = [
     path('request-exchange/<int:order_id>/', views.request_exchange, name='request_exchange'),
     path('download-invoice/<int:order_id>/', views.download_invoice, name='download_invoice'),
     path('confirm-delivery/<int:order_id>/', views.confirm_delivery, name='confirm_delivery'),
+    path('cancel/<int:order_id>/', views.cancel_order, name='cancel_order'),
+    path('send-otp/<int:order_id>/', views.send_delivery_otp_view, name='send_delivery_otp'),
+    path('deliver/', views.deliver_order, name='deliver_order'),
 ]

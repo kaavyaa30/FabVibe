@@ -1,16 +1,14 @@
 import os
 from celery import Celery
 
-# Set the default Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecommerce.settings')
 
 app = Celery('ecommerce')
 
-# Load config from Django settings with CELERY namespace
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Auto-discover tasks in all installed apps
-app.autodiscover_tasks()
+# Explicitly list apps with tasks so autodiscovery never misses them
+app.autodiscover_tasks(['products', 'orders'])
 
 
 @app.task(bind=True)

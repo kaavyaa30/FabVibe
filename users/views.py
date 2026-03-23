@@ -21,21 +21,43 @@ def register(request):
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             # Save user with hashed password
-            user = form.save()
+            try:
+                user = form.save()
+            except Exception as e:
+                print(f"[REGISTER ERROR] Failed to save user: {e}")
+                import traceback; traceback.print_exc()
+                messages.error(request, f'Registration failed: {e}')
+                return render(request, 'users/register.html', {'form': form})
+
+            # Award signup bonus wallet credit
+            try:
+                from wallet.services import award_signup_bonus
+                award_signup_bonus(user)
+            except Exception:
+                pass
             
             # Generate OTP
             otp_code = user.generate_otp()
-            
-            # Send OTP via email
+
+            # Send OTP via Brevo
             try:
-                send_mail(
-                    subject='FabVibe - Verify Your Account',
-                    message=f'Your OTP code is: {otp_code}\n\nThis code will expire in 10 minutes.',
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
+                from utils import send_brevo_email
+                from django.template.loader import render_to_string
+                html_content = render_to_string('users/emails/otp_email.html', {
+                    'user': user,
+                    'otp': otp_code,
+                    'purpose': 'verify your account',
+                })
+                sent = send_brevo_email(
+                    subject='FabVibe — Verify Your Account',
+                    to_email=user.email,
+                    html_content=html_content,
+                    to_name=user.get_full_name() or user.email,
                 )
-                messages.success(request, 'Registration successful! Please check your email for the OTP code.')
+                if sent:
+                    messages.success(request, 'Registration successful! Please check your email for the OTP code.')
+                else:
+                    messages.warning(request, f'Registration successful! OTP: {otp_code} (Email sending failed)')
             except Exception as e:
                 messages.warning(request, f'Registration successful! OTP: {otp_code} (Email sending failed)')
             
@@ -77,20 +99,23 @@ def login_view(request):
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
             
-            # Try to find user by email or phone number
+            # Resolve the User object first (by email or phone)
             user = None
             try:
-                # Check if username is email or phone
                 if '@' in username:
-                    user = User.objects.get(email=username)
+                    user = User.objects.get(email=username, is_active=True)
                 else:
-                    user = User.objects.get(phone_number=username)
+                    user = User.objects.get(phone_number=username, is_active=True)
             except User.DoesNotExist:
                 pass
             
-            # Authenticate user
+            # Authenticate using email (the USERNAME_FIELD)
             if user:
-                authenticated_user = authenticate(request, username=user.email, password=password)
+                authenticated_user = authenticate(
+                    request,
+                    username=user.email,  # USERNAME_FIELD is email
+                    password=password
+                )
                 if authenticated_user:
                     # Migrate session cart BEFORE login (to preserve session key)
                     merged_count, total_items = migrate_session_cart_to_user(request, authenticated_user)
@@ -176,18 +201,27 @@ def resend_otp(request):
         
         # Generate new OTP
         otp_code = user.generate_otp()
-        
-        # Send OTP via email
+
+        # Send OTP via Brevo
         try:
-            send_mail(
-                subject='FabVibe - Verify Your Account',
-                message=f'Your new OTP code is: {otp_code}\n\nThis code will expire in 10 minutes.',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
+            from utils import send_brevo_email
+            from django.template.loader import render_to_string
+            html_content = render_to_string('users/emails/otp_email.html', {
+                'user': user,
+                'otp': otp_code,
+                'purpose': 'verify your account',
+            })
+            sent = send_brevo_email(
+                subject='FabVibe — New OTP Code',
+                to_email=user.email,
+                html_content=html_content,
+                to_name=user.get_full_name() or user.email,
             )
-            messages.success(request, 'New OTP sent to your email.')
-        except Exception as e:
+            if sent:
+                messages.success(request, 'New OTP sent to your email.')
+            else:
+                messages.warning(request, f'New OTP: {otp_code} (Email sending failed)')
+        except Exception:
             messages.warning(request, f'New OTP: {otp_code} (Email sending failed)')
         
         # Send OTP via SMS if phone number provided

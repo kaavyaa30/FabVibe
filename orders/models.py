@@ -54,6 +54,9 @@ class Order(models.Model):
     delivery_otp = models.CharField(max_length=6, blank=True)
     otp_verified = models.BooleanField(default=False)
     otp_sent_at = models.DateTimeField(null=True, blank=True)
+
+    # Wallet split payment
+    wallet_amount_used = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

@@ -95,6 +95,21 @@
                         </form>
                     {% elif show_add_form %}
                         <!-- Add New Address Form -->
+
+                        <!-- Use Current Location button -->
+                        <button type="button" id="useLocationBtn"
+                          class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
+                          style="background:#456273;color:#fff;border:none;padding:.65rem;">
+                          <i class="fas fa-location-arrow"></i>
+                          <span id="locationBtnText">Use Current Location</span>
+                        </button>
+
+                        <!-- Map (shown after detection) -->
+                        <div id="mapContainer" style="display:none;border-radius:10px;overflow:hidden;margin-bottom:1.25rem;">
+                          <div id="addressMap" style="height:220px;width:100%;"></div>
+                          <div id="mapStatus" class="text-center py-2" style="background:#f0f4f6;font-size:.8rem;color:#456273;"></div>
+                        </div>
+
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="add_address">
@@ -248,4 +263,121 @@
         </div>
     </div>
 </div>
+
+{% if show_add_form %}
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const btn     = document.getElementById('useLocationBtn');
+  const btnText = document.getElementById('locationBtnText');
+  const status  = document.getElementById('mapStatus');
+  if (!btn) return;
+
+  let map = null, marker = null;
+
+  function initMap(lat, lng) {
+    document.getElementById('mapContainer').style.display = 'block';
+    if (!map) {
+      map = L.map('addressMap').setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors', maxZoom: 19
+      }).addTo(map);
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', function () {
+        const p = marker.getLatLng();
+        reverseGeocode(p.lat, p.lng);
+      });
+    } else {
+      map.setView([lat, lng], 16);
+      marker.setLatLng([lat, lng]);
+    }
+    setTimeout(() => map.invalidateSize(), 200);
+  }
+
+  btn.addEventListener('click', function () {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    btnText.textContent = 'Detecting…';
+    btn.disabled = true;
+    status.textContent = 'Requesting your location…';
+    document.getElementById('mapContainer').style.display = 'block';
+
+    navigator.geolocation.getCurrentPosition(
+      async function (pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        status.textContent = 'Got coordinates, fetching address…';
+        initMap(lat, lng);
+        await reverseGeocode(lat, lng);
+        btnText.textContent = 'Update Location';
+        btn.disabled = false;
+      },
+      function (err) {
+        btnText.textContent = 'Use Current Location';
+        btn.disabled = false;
+        status.textContent = '';
+        const msgs = {
+          1: 'Permission denied. Please allow location access in your browser settings.',
+          2: 'Location unavailable. Try again.',
+          3: 'Request timed out. Try again.'
+        };
+        alert(msgs[err.code] || 'Could not get location.');
+      },
+      { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
+    );
+  });
+
+  async function reverseGeocode(lat, lng) {
+    let bdc = null, nom = null;
+    try {
+      const [r1, r2] = await Promise.allSettled([
+        fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`),
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`, {
+          headers: { 'Accept-Language': 'en' }
+        })
+      ]);
+      if (r1.status === 'fulfilled' && r1.value.ok) bdc = await r1.value.json();
+      if (r2.status === 'fulfilled' && r2.value.ok) nom = await r2.value.json();
+    } catch (e) {}
+
+    if (!bdc && !nom) {
+      status.textContent = '⚠️ Could not fetch address — please fill in manually.';
+      return;
+    }
+
+    const a      = nom?.address || {};
+    const line1  = [a.house_number, a.road || a.pedestrian || a.footway, a.neighbourhood || a.suburb]
+                    .filter(Boolean).join(', ') || bdc?.locality || '';
+    const line2  = a.suburb || a.neighbourhood || bdc?.locality || '';
+    const city   = a.city || a.city_district || a.town || bdc?.city || a.village || bdc?.locality || '';
+    const state  = a.state || bdc?.principalSubdivision || '';
+    const postal = a.postcode || bdc?.postcode || '';
+    const country = a.country || bdc?.countryName || 'India';
+
+    fill('id_address_line1', line1);
+    fill('id_address_line2', line2 !== line1 ? line2 : '');
+    fill('id_city',          city);
+    fill('id_state',         state);
+    fill('id_postal_code',   postal);
+    fill('id_country',       country);
+
+    status.textContent = `📍 ${[line2, city, state, postal].filter(Boolean).join(', ')}`;
+  }
+
+  function fill(id, value) {
+    const el = document.getElementById(id);
+    if (el && value) {
+      el.value = value;
+      el.dispatchEvent(new Event('input',  { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+});
+</script>
+{% endif %}
+
 {% endblock %}

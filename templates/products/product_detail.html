@@ -259,6 +259,11 @@
                     <span class="badge bg-success">In Stock</span>
                 {% else %}
                     <span class="badge bg-danger">Out of Stock</span>
+                    {% if user.is_authenticated %}
+                    <button class="btn btn-sm btn-outline-warning ms-2" onclick="subscribeStockAlert()">
+                        <i class="fas fa-bell me-1"></i>Notify Me When Available
+                    </button>
+                    {% endif %}
                 {% endif %}
             </div>
             
@@ -275,6 +280,11 @@
                     <a href="#" class="text-primary ms-2" data-bs-toggle="modal" data-bs-target="#sizeChartModal">
                         <small><i class="fas fa-ruler"></i> Size Chart</small>
                     </a>
+                    {% if user.is_authenticated %}
+                    <a href="#" class="text-success ms-2" data-bs-toggle="modal" data-bs-target="#sizeRecommenderModal">
+                        <small><i class="fas fa-magic"></i> Find My Size</small>
+                    </a>
+                    {% endif %}
                 </h5>
                 <div class="size-selector">
                     {% for size in available_sizes %}
@@ -315,7 +325,7 @@
                 </div>
             </div>
             
-            <div class="d-flex gap-3 mb-4">
+            <div class="d-flex gap-3 mb-4 flex-wrap">
                 <button class="btn btn-primary btn-lg flex-grow-1" onclick="addToCart()" id="addToCartBtn">
                     <i class="fas fa-shopping-cart"></i> Add to Cart
                 </button>
@@ -324,17 +334,13 @@
                     <i class="{% if in_wishlist %}fas{% else %}far{% endif %} fa-heart"></i>
                 </button>
                 {% endif %}
+                <a href="{% url 'products:ar_tryon' product.id %}"
+                   class="btn btn-lg"
+                   style="background:#456273;color:#fff;white-space:nowrap;">
+                    <i class="fas fa-camera me-1"></i>AR Try-On
+                </a>
+
             </div>
-            <!-- AR Try-On Button -->
-            <button class="btn btn-lg w-100 mb-3" id="tryOnBtn"
-                onclick="openTryOn(
-                    [{% for img in product_images %}'{{ img.image.url }}'{% if not forloop.last %},{% endif %}{% endfor %}],
-                    '{{ product.name|escapejs }}',
-                    '{{ product.category.name|lower|escapejs }}'
-                )"
-                style="background:#456273; color:#fff; border:none; border-radius:10px;">
-                <i class="fas fa-camera me-2"></i> AR Virtual Try-On
-            </button>
             {% endif %}
         </div>
     </div>
@@ -431,7 +437,62 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Complete the Look -->
+    <div class="row mt-5" id="completeLookSection" style="display:none!important">
+      <div class="col-12">
+        <h3 class="mb-3"><i class="fas fa-magic me-2 text-warning"></i>Complete the Look</h3>
+        <div class="row g-3" id="completeLookGrid"></div>
+      </div>
+    </div>
+
+    <!-- Recently Viewed -->
+    {% if user.is_authenticated %}
+    <div class="row mt-5" id="recentlyViewedSection" style="display:none!important">
+      <div class="col-12">
+        <h3 class="mb-3"><i class="fas fa-history me-2" style="color:#456273"></i>Recently Viewed</h3>
+        <div class="row g-3" id="recentlyViewedGrid"></div>
+      </div>
+    </div>
+    {% endif %}
 </div>
+
+<!-- Size Recommender Modal -->
+{% if user.is_authenticated %}
+<div class="modal fade" id="sizeRecommenderModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#456273,#2c3e50);color:#fff">
+        <h5 class="modal-title" style="color:#fff"><i class="fas fa-ruler me-2"></i>Size Recommender</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Enter your measurements and we'll suggest the best size for you.</p>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label small fw-bold">Height (cm)</label>
+            <input type="number" class="form-control" id="sr_height" placeholder="e.g. 165"></div>
+          <div class="col-6"><label class="form-label small fw-bold">Weight (kg)</label>
+            <input type="number" class="form-control" id="sr_weight" placeholder="e.g. 60"></div>
+          <div class="col-4"><label class="form-label small fw-bold">Chest (cm)</label>
+            <input type="number" class="form-control" id="sr_chest" placeholder="e.g. 88"></div>
+          <div class="col-4"><label class="form-label small fw-bold">Waist (cm)</label>
+            <input type="number" class="form-control" id="sr_waist" placeholder="e.g. 72"></div>
+          <div class="col-4"><label class="form-label small fw-bold">Hips (cm)</label>
+            <input type="number" class="form-control" id="sr_hips" placeholder="e.g. 96"></div>
+        </div>
+        <div id="srResult" class="mt-3" style="display:none">
+          <div class="alert alert-success py-2 mb-0">
+            <i class="fas fa-check-circle me-2"></i>Recommended size: <strong id="srSize" style="font-size:1.1rem"></strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="getSizeRecommendation()"><i class="fas fa-magic me-1"></i>Get My Size</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Size Chart Modal -->
 <div class="modal fade" id="sizeChartModal" tabindex="-1" aria-labelledby="sizeChartModalLabel" aria-hidden="true">
@@ -773,9 +834,7 @@
 
     // Toggle wishlist
     function toggleWishlist() {
-        const productId = {{ product.id }};
-        const wishlistBtn = document.getElementById('wishlistBtn');
-        const icon = wishlistBtn.querySelector('i');
+        const productId = {{ product.id }};ishlistBtn.querySelector('i');
         
         const isInWishlist = icon.classList.contains('fas');
         const url = isInWishlist ? 
@@ -834,12 +893,105 @@
             showToast('An error occurred. Please try again.', 'danger');
         });
     }
-</script>
 
-<!-- AR Try-On: TF.js core + MediaPipe models (most reliable browser stack) -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.2.0/dist/tf-core.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.2.0/dist/tf-backend-webgl.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
-<script src="{% static 'js/ar-tryon.js' %}"></script>
+    // ── Complete the Look ─────────────────────────────────────
+    fetch('{% url "products:complete_the_look" product.id %}')
+      .then(r => r.json()).then(d => {
+        if (!d.products || !d.products.length) return;
+        const sec = document.getElementById('completeLookSection');
+        const grid = document.getElementById('completeLookGrid');
+        sec.style.removeProperty('display');
+        d.products.forEach(p => {
+          const col = document.createElement('div');
+          col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+          col.innerHTML = `<div class="card h-100 border-0 shadow-sm" style="border-radius:10px;overflow:hidden">
+            <a href="/product/${p.slug}/"><img src="${p.image}" class="card-img-top" style="height:140px;object-fit:cover" alt="${p.name}" onerror="this.src='https://via.placeholder.com/150'"></a>
+            <div class="card-body p-2">
+              <div class="small fw-bold text-truncate">${p.name}</div>
+              <div class="small" style="color:#456273">₹${p.price}</div>
+              <div class="text-muted" style="font-size:.7rem">${p.category}</div>
+            </div></div>`;
+          grid.appendChild(col);
+        });
+      }).catch(() => {});
+
+    // ── Recently Viewed ───────────────────────────────────────
+    {% if user.is_authenticated %}
+    fetch('{% url "products:track_recently_viewed" product.id %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]||''}
+    });
+    fetch('{% url "products:recently_viewed" %}')
+      .then(r => r.json()).then(d => {
+        const filtered = d.products.filter(p => p.id !== {{ product.id }});
+        if (!filtered.length) return;
+        const sec = document.getElementById('recentlyViewedSection');
+        const grid = document.getElementById('recentlyViewedGrid');
+        sec.style.removeProperty('display');
+        filtered.slice(0, 6).forEach(p => {
+          const col = document.createElement('div');
+          col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+          col.innerHTML = `<div class="card h-100 border-0 shadow-sm" style="border-radius:10px;overflow:hidden">
+            <a href="/product/${p.slug}/"><img src="${p.image}" class="card-img-top" style="height:130px;object-fit:cover" alt="${p.name}" onerror="this.src='https://via.placeholder.com/150'"></a>
+            <div class="card-body p-2">
+              <div class="small fw-bold text-truncate">${p.name}</div>
+              <div class="small" style="color:#456273">₹${p.price}</div>
+            </div></div>`;
+          grid.appendChild(col);
+        });
+      }).catch(() => {});
+    {% endif %}
+
+    // ── Size Recommender ──────────────────────────────────────
+    {% if user.is_authenticated %}
+    fetch('{% url "products:size_recommender" %}')
+      .then(r => r.json()).then(d => {
+        if (d.height_cm) document.getElementById('sr_height').value = d.height_cm;
+        if (d.weight_kg) document.getElementById('sr_weight').value = d.weight_kg;
+        if (d.chest_cm)  document.getElementById('sr_chest').value  = d.chest_cm;
+        if (d.waist_cm)  document.getElementById('sr_waist').value  = d.waist_cm;
+        if (d.hips_cm)   document.getElementById('sr_hips').value   = d.hips_cm;
+        if (d.recommended_size) {
+          document.getElementById('srSize').textContent = d.recommended_size;
+          document.getElementById('srResult').style.display = 'block';
+        }
+      }).catch(() => {});
+
+    function getSizeRecommendation() {
+      const payload = {
+        height_cm: document.getElementById('sr_height').value,
+        weight_kg: document.getElementById('sr_weight').value,
+        chest_cm:  document.getElementById('sr_chest').value,
+        waist_cm:  document.getElementById('sr_waist').value,
+        hips_cm:   document.getElementById('sr_hips').value,
+      };
+      fetch('{% url "products:size_recommender" %}', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json',
+          'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]||''},
+        body: JSON.stringify(payload)
+      }).then(r => r.json()).then(d => {
+        if (d.recommended_size) {
+          document.getElementById('srSize').textContent = d.recommended_size;
+          document.getElementById('srResult').style.display = 'block';
+          document.querySelectorAll('.size-option').forEach(btn => {
+            if (btn.textContent.trim() === d.recommended_size) btn.click();
+          });
+        }
+      });
+    }
+    {% endif %}
+
+    function subscribeStockAlert() {
+      const size = document.getElementById('selectedSize')?.value || '';
+      fetch('{% url "products:stock_alert" product.id %}', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json',
+          'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]||''},
+        body: JSON.stringify({size})
+      }).then(r => r.json()).then(d => {
+        showToast(d.message || "You'll be notified when back in stock!", 'success');
+      }).catch(() => showToast('Could not subscribe. Please try again.', 'danger'));
+    }
+</script>
 {% endblock %}

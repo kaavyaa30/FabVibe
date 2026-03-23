@@ -27,7 +27,7 @@
       <button type="button" id="useLocationBtn" class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
         style="background:#456273;color:#fff;border:none;padding:.65rem;">
         <i class="fas fa-location-arrow"></i>
-        <span id="locationBtnText">Use Current Location</span>
+        <span id="locationBtnText">{% if action == 'Edit' %}Update Location{% else %}Use Current Location{% endif %}</span>
       </button>
 
       <!-- Map container (shown after location is fetched) -->
@@ -117,17 +117,40 @@
 </div>
 
 <!-- Leaflet (free, no API key needed) -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 
 <script>
 let map = null;
 let marker = null;
 
+function initMap(lat, lng) {
+  document.getElementById('mapContainer').style.display = 'block';
+  if (!map) {
+    map = L.map('addressMap', { zoomControl: true }).setView([lat, lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+  } else {
+    map.setView([lat, lng], 16);
+  }
+  if (marker) {
+    marker.setLatLng([lat, lng]);
+  } else {
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    marker.on('dragend', function () {
+      const p = marker.getLatLng();
+      reverseGeocode(p.lat, p.lng);
+    });
+  }
+  setTimeout(() => map.invalidateSize(), 150);
+}
+
 document.getElementById('useLocationBtn').addEventListener('click', function () {
-  const btn      = this;
-  const btnText  = document.getElementById('locationBtnText');
-  const status   = document.getElementById('mapStatus');
+  const btn     = this;
+  const btnText = document.getElementById('locationBtnText');
+  const status  = document.getElementById('mapStatus');
 
   if (!navigator.geolocation) {
     alert('Geolocation is not supported by your browser.');
@@ -136,87 +159,105 @@ document.getElementById('useLocationBtn').addEventListener('click', function () 
 
   btnText.textContent = 'Detecting location…';
   btn.disabled = true;
+  status.textContent = 'Requesting location…';
+  document.getElementById('mapContainer').style.display = 'block';
 
   navigator.geolocation.getCurrentPosition(
     async function (pos) {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-
-      // Show map
-      document.getElementById('mapContainer').style.display = 'block';
+      initMap(lat, lng);
       status.textContent = 'Fetching address…';
-
-      // Init Leaflet map (only once)
-      if (!map) {
-        map = L.map('addressMap').setView([lat, lng], 16);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-      } else {
-        map.setView([lat, lng], 16);
-      }
-
-      // Place / move marker
-      if (marker) {
-        marker.setLatLng([lat, lng]);
-      } else {
-        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-        marker.on('dragend', function () {
-          const p = marker.getLatLng();
-          reverseGeocode(p.lat, p.lng, status);
-        });
-      }
-
-      // Reverse geocode via Nominatim (free, no key)
-      await reverseGeocode(lat, lng, status);
-
+      await reverseGeocode(lat, lng);
       btnText.textContent = 'Update Location';
       btn.disabled = false;
     },
     function (err) {
-      btnText.textContent = 'Use Current Location';
+      btnText.textContent = '{% if action == "Edit" %}Update Location{% else %}Use Current Location{% endif %}';
       btn.disabled = false;
+      status.textContent = '';
       const msgs = {
-        1: 'Location permission denied. Please allow access in your browser settings.',
+        1: 'Permission denied — please allow location access in browser settings.',
         2: 'Location unavailable. Try again.',
-        3: 'Location request timed out.',
+        3: 'Timed out. Try again.',
       };
       alert(msgs[err.code] || 'Could not get location.');
     },
-    { timeout: 10000, enableHighAccuracy: true }
+    { timeout: 20000, enableHighAccuracy: true, maximumAge: 0 }
   );
 });
 
-async function reverseGeocode(lat, lng, statusEl) {
+async function reverseGeocode(lat, lng) {
+  const status = document.getElementById('mapStatus');
+  let bdc = null, nom = null;
+
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
-    const res  = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-    const data = await res.json();
-    const a    = data.address || {};
+    const [bdcRes, nomRes] = await Promise.allSettled([
+      fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`),
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`, {
+        headers: { 'Accept-Language': 'en' }
+      })
+    ]);
+    if (bdcRes.status === 'fulfilled' && bdcRes.value.ok) bdc = await bdcRes.value.json();
+    if (nomRes.status === 'fulfilled' && nomRes.value.ok) nom = await nomRes.value.json();
+  } catch(e) {}
 
-    // Fill form fields
-    setField('id_address_line1',
-      [a.road, a.neighbourhood, a.suburb].filter(Boolean).join(', ') || data.display_name?.split(',')[0] || '');
-    setField('id_address_line2',
-      [a.residential, a.quarter].filter(Boolean).join(', '));
-    setField('id_city',
-      a.city || a.town || a.village || a.county || '');
-    setField('id_state',
-      a.state || '');
-    setField('id_postal_code',
-      a.postcode || '');
-    setField('id_country',
-      a.country || 'India');
+  if (!bdc && !nom) {
+    if (status) status.textContent = '⚠️ Could not fetch address — please fill manually.';
+    return;
+  }
 
-    if (statusEl) statusEl.textContent = '📍 ' + (data.display_name || 'Location found');
-  } catch (e) {
-    if (statusEl) statusEl.textContent = 'Could not fetch address details.';
+  const a = nom?.address || {};
+  const line1 = [a.house_number, a.road || a.pedestrian || a.footway || a.path,
+                 a.neighbourhood || a.suburb || a.residential]
+                .filter(Boolean).join(', ')
+                || bdc?.locality || nom?.display_name?.split(',')[0] || '';
+  const line2  = bdc?.locality || a.suburb || a.neighbourhood || a.quarter || '';
+  const city   = a.city || a.city_district || a.town || bdc?.city || a.village || a.county || bdc?.locality || '';
+  const state  = a.state || bdc?.principalSubdivision || '';
+  const postal = a.postcode || bdc?.postcode || '';
+  const country = a.country || bdc?.countryName || 'India';
+
+  forceField('id_address_line1', line1);
+  forceField('id_address_line2', line2 !== line1 ? line2 : '');
+  forceField('id_city',          city);
+  forceField('id_state',         state);
+  forceField('id_postal_code',   postal);
+  forceField('id_country',       country);
+
+  const displayCity = city || bdc?.locality || '';
+  if (status) status.textContent = `📍 ${line2 ? line2 + ', ' : ''}${displayCity}, ${state} ${postal}`.trim().replace(/,\s*$/, '');
+}
+
+function forceField(id, value) {
+  const el = document.getElementById(id);
+  if (el && value !== undefined && value !== null) {
+    el.value = value;
+    el.dispatchEvent(new Event('input',  { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 
-function setField(id, value) {
-  const el = document.getElementById(id);
-  if (el && value) el.value = value;
-}
+// On Edit page: show existing address on map
+window.addEventListener('load', function () {
+  const city    = document.getElementById('id_city')?.value?.trim();
+  const country = document.getElementById('id_country')?.value?.trim();
+  if (!city) return;
+  const query = encodeURIComponent(
+    [document.getElementById('id_address_line1')?.value, city, country].filter(Boolean).join(', ')
+  );
+  fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
+    headers: { 'Accept-Language': 'en' }
+  })
+  .then(r => r.json())
+  .then(results => {
+    if (results?.[0]) {
+      initMap(parseFloat(results[0].lat), parseFloat(results[0].lon));
+      document.getElementById('mapStatus').textContent = '📍 ' + results[0].display_name;
+      document.getElementById('locationBtnText').textContent = 'Update Location';
+    }
+  })
+  .catch(() => {});
+});
 </script>
 {% endblock %}

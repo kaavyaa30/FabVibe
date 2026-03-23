@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order Management — FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+.mgmt-header { background: linear-gradient(135deg,#456273,#3d5a6b); color:#fff; padding:2rem 0 1.5rem; margin-bottom:2rem; border-radius:0 0 12px 12px; }
+.mgmt-header h1, .mgmt-header p { color:#fff; }
+.filter-bar { background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
+.orders-table th { background:#f8f9fa; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; font-weight:600; border-bottom:2px solid #dee2e6; }
+.orders-table td { vertical-align:middle; }
+.orders-table tbody tr:hover { background:#f8f9fa; }
+.status-badge { padding:.3rem .85rem; border-radius:20px; font-weight:600; font-size:.75rem; text-transform:uppercase; white-space:nowrap; }
+.status-pending        { background:#fff3cd; color:#856404; }
+.status-processing     { background:#cfe2ff; color:#084298; }
+.status-shipped        { background:#d1ecf1; color:#0c5460; }
+.status-out_for_delivery { background:#d1e7dd; color:#0f5132; }
+.status-delivered      { background:#d4edda; color:#155724; }
+.status-cancelled      { background:#c0392b; color:#fff; }
+.pay-completed { color:#198754; font-weight:600; }
+.pay-pending   { color:#856404; font-weight:600; }
+.pay-failed    { color:#dc3545; font-weight:600; }
+.order-id-link { font-family:monospace; font-weight:700; color:#456273; text-decoration:none; }
+.order-id-link:hover { text-decoration:underline; }
+.stat-pill { background:#f0f4f6; border-radius:8px; padding:.5rem 1rem; font-size:.85rem; color:#2c3e50; }
+.stat-pill span { font-weight:700; color:#456273; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="mgmt-header">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h1 class="mb-1"><i class="fas fa-clipboard-list me-2"></i>Order Management</h1>
+        <p class="mb-0 opacity-75">View and update all customer orders</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <div class="stat-pill"><span>{{ orders|length }}</span> orders shown</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-600 mb-1">Search</label>
+        <input type="text" name="search" class="form-control form-control-sm"
+               placeholder="Order ID or customer email…" value="{{ search_query }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-600 mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-600 mb-1">From</label>
+        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request.GET.date_from }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-600 mb-1">To</label>
+        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request.GET.date_to }}">
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
+          <i class="fas fa-filter me-1"></i>Filter
+        </button>
+        <a href="{% url 'admin_panel:order_list' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-times"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if orders %}
+      <div class="table-responsive">
+        <table class="table orders-table mb-0">
+          <thead>
+            <tr>
+              <th class="ps-3">Order ID</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Payment</th>
+              <th class="text-end">Amount</th>
+              <th>Date</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+            <tr>
+              <td class="ps-3">
+                <a href="{% url 'admin_panel:order_detail' order.id %}" class="order-id-link">
+                  {{ order.order_id }}
+                </a>
+              </td>
+              <td>
+                <div class="fw-500">{{ order.user.get_full_name|default:order.user.email }}</div>
+                <div class="text-muted small">{{ order.user.email }}</div>
+              </td>
+              <td>
+                <span class="status-badge status-{{ order.status }}">
+                  {{ order.get_status_display }}
+                </span>
+              </td>
+              <td>
+                <span class="pay-{{ order.payment_status }}">
+                  {{ order.get_payment_status_display }}
+                </span>
+                <div class="text-muted small">{{ order.get_payment_method_display }}</div>
+              </td>
+              <td class="text-end fw-bold">₹{{ order.total_amount }}</td>
+              <td>
+                <div>{{ order.created_at|date:"d M Y" }}</div>
+                <div class="text-muted small">{{ order.created_at|date:"h:i A" }}</div>
+              </td>
+              <td class="text-center">
+                <a href="{% url 'admin_panel:order_detail' order.id %}"
+                   class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye me-1"></i>Manage
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+        <p class="mb-0">No orders found matching your filters.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,572 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AR Try-On — {{ product.name }} | FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+body { background: #0d1117; }
+.ar-page-title { color:#fff; font-size:1.1rem; font-weight:700; text-align:center; margin-bottom:.75rem; }
+.ar-page-title span { color:#7eb8cc; }
+.ar-wrapper { position:relative; width:100%; max-width:560px; margin:0 auto; border-radius:16px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.7); background:#000; }
+#webcam { display:none; }
+#arCanvas { width:100%; display:block; }
+#statusOverlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,.82); color:#fff; text-align:center; padding:2rem; z-index:20; border-radius:16px; }
+#statusOverlay.hidden { display:none; }
+.spinner { width:48px; height:48px; border:4px solid rgba(255,255,255,.15); border-top-color:#7eb8cc; border-radius:50%; animation:spin .85s linear infinite; margin-bottom:1rem; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.ar-info { background:#1a2332; color:#fff; padding:.6rem 1.1rem; display:flex; align-items:center; justify-content:space-between; font-size:.82rem; max-width:560px; margin:0 auto; border-radius:0 0 12px 12px; }
+.ar-info .pname { font-weight:700; font-size:.95rem; }
+.mode-badge { background:#456273; color:#fff; border-radius:20px; padding:.15rem .7rem; font-size:.72rem; font-weight:700; text-transform:uppercase; }
+.ar-controls { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; margin-top:1rem; }
+.ar-controls .btn { border-radius:30px; font-size:.82rem; }
+.track-row { text-align:center; margin-top:.5rem; font-size:.78rem; color:#adb5bd; }
+.tdot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#555; margin-right:5px; transition:background .3s; }
+.tdot.good { background:#28a745; }
+.tdot.ok   { background:#ffc107; }
+.tdot.poor { background:#dc3545; }
+.ar-tips { background:#1a2332; border-radius:10px; padding:.85rem 1.1rem; margin-top:1rem; color:#adb5bd; font-size:.8rem; max-width:560px; margin-left:auto; margin-right:auto; }
+.ar-tips li { margin-bottom:.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width:640px">
+  <p class="ar-page-title">AR Try-On — <span>{{ product.name }}</span></p>
+  <div class="ar-wrapper" id="arWrapper">
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="arCanvas"></canvas>
+    <div id="statusOverlay">
+      <div class="spinner"></div>
+      <h6 id="statusTitle" style="margin-bottom:.3rem">Starting camera…</h6>
+      <p id="statusMsg" style="font-size:.8rem;opacity:.7;margin:0">Allow camera access when prompted.</p>
+    </div>
+  </div>
+  <div class="ar-info">
+    <div>
+      <div class="pname">{{ product.name }}</div>
+      <small style="opacity:.6">{{ product.category.name }}</small>
+    </div>
+    <span class="mode-badge">{{ ar_mode }}</span>
+  </div>
+  <div class="ar-controls">
+    <button class="btn btn-outline-light btn-sm" onclick="flipCamera()"><i class="fas fa-sync-alt me-1"></i>Flip</button>
+    <button class="btn btn-outline-light btn-sm" onclick="captureSnapshot()"><i class="fas fa-camera me-1"></i>Snapshot</button>
+    <a href="{% url 'products:product_detail' product.slug %}" class="btn btn-sm" style="background:#456273;color:#fff"><i class="fas fa-arrow-left me-1"></i>Back</a>
+  </div>
+  <div class="track-row">
+    <span class="tdot" id="tdot"></span>
+    <span id="tlabel">Initialising…</span>
+  </div>
+  <div class="ar-tips mt-2">
+    <strong style="color:#fff">Tips:</strong>
+    <ul class="mt-1 mb-0 ps-3">
+      {% if ar_mode == 'face' %}
+        <li>Face the camera directly in good lighting.</li>
+        <li>Keep your full face visible and centred.</li>
+      {% elif ar_mode == 'hands' %}
+        <li>Hold your hand open, palm facing the camera.</li>
+        <li>Keep your hand steady and well-lit.</li>
+      {% else %}
+        <li>Stand ~1–2 m back so your full body is visible.</li>
+        <li>Face the camera directly in good lighting.</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// DJANGO CONFIG — injected at render time
+// ═══════════════════════════════════════════════════════════════════════════
+const AR_MODE     = "{{ ar_mode }}";      // 'face' | 'hands' | 'pose'
+const AR_CATEGORY = "{{ ar_category }}";  // 'sunglasses' | 'earrings' | 'tops' | …
+const IMG_SRC     = "{{ product_image_url }}";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DOM REFS
+// ═══════════════════════════════════════════════════════════════════════════
+const video  = document.getElementById('webcam');
+const canvas = document.getElementById('arCanvas');
+const ctx    = canvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let facingMode = 'user';  // 'user' = front (mirrored), 'environment' = rear
+let stream     = null;
+let mpCamera   = null;
+let mpSolution = null;
+let prodImg    = null;    // HTMLImageElement — the transparent product asset
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+function setStatus(title, msg, hidden) {
+  const ov = document.getElementById('statusOverlay');
+  document.getElementById('statusTitle').textContent = title;
+  document.getElementById('statusMsg').textContent   = msg;
+  ov.classList.toggle('hidden', !!hidden);
+}
+function setTracking(q) {
+  const dot = document.getElementById('tdot');
+  const lbl = document.getElementById('tlabel');
+  const MAP = { good:['good','Tracking — good'], ok:['ok','Tracking — partial'],
+                poor:['poor','Tracking — lost'], none:['','No landmarks detected'] };
+  const [cls, txt] = MAP[q] || MAP.none;
+  dot.className = 'tdot ' + cls;
+  lbl.textContent = txt;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRODUCT IMAGE LOADER
+// No crossOrigin — local Django media has no CORS headers and we don't
+// call toDataURL(), so canvas taint is not a concern.
+// ═══════════════════════════════════════════════════════════════════════════
+function loadProductImage() {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload  = () => { prodImg = img; resolve(); };
+    img.onerror = () => reject(new Error('Could not load product image: ' + IMG_SRC));
+    img.src = IMG_SRC;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAMERA
+// ═══════════════════════════════════════════════════════════════════════════
+async function startCamera() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await new Promise(r => { video.onloadedmetadata = r; });
+    await video.play();
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    return true;
+  } catch (e) {
+    setStatus('Camera Error', e.message || 'Cannot access camera.');
+    return false;
+  }
+}
+function flipCamera() {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  if (mpCamera) { mpCamera.stop(); mpCamera = null; }
+  startCamera().then(ok => { if (ok) startMPCamera(); });
+}
+function captureSnapshot() {
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'fabvibe-ar.png';
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MEDIAPIPE CDN LOADER
+// ═══════════════════════════════════════════════════════════════════════════
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe';
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res;
+    s.onerror = () => rej(new Error('Failed to load: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CORE DRAWING UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * drawFrame — paint the live video onto the canvas each frame.
+ *
+ * Front camera ('user') is mirrored: translate to right edge, scale X = -1.
+ * This makes the user see themselves as in a mirror.
+ */
+function drawFrame(inputFrame) {
+  ctx.save();
+  if (facingMode === 'user') {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(inputFrame, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
+/**
+ * toLandmarkPx — convert a normalised MediaPipe landmark {x,y} (0–1 range)
+ * into canvas pixel coordinates {x,y}.
+ *
+ * WHY WE FLIP X FOR FRONT CAMERA:
+ * MediaPipe landmarks are in un-mirrored camera space (x=0 = camera left).
+ * When we mirror the video, camera-left appears on the RIGHT of the canvas.
+ * So we flip X to match the visible position:
+ *   front camera:  canvas_x = (1 - lm.x) * canvas.width
+ *   rear  camera:  canvas_x =       lm.x  * canvas.width
+ *
+ * This guarantees every overlay lands exactly on the visible landmark.
+ */
+function toLandmarkPx(lm) {
+  return {
+    x: facingMode === 'user' ? (1 - lm.x) * canvas.width : lm.x * canvas.width,
+    y: lm.y * canvas.height,
+  };
+}
+
+/** Euclidean pixel distance between two canvas-pixel points. */
+function dist(a, b) { return Math.hypot(b.x - a.x, b.y - a.y); }
+
+/** Midpoint between two canvas-pixel points. */
+function mid(a, b)  { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+
+/** Angle in radians of the line from point a to point b. */
+function lineAngle(a, b) { return Math.atan2(b.y - a.y, b.x - a.x); }
+
+/**
+ * drawAssetCentered — draw the product image with its CENTER at (cx, cy).
+ *
+ * CENTER ALIGNMENT MATH:
+ *   imgH = imgW * (naturalHeight / naturalWidth)   ← preserve aspect ratio
+ *
+ *   ctx.drawImage(img, x, y, w, h) places the TOP-LEFT at (x, y).
+ *   To center on (cx, cy):
+ *     x = cx - imgW / 2
+ *     y = cy - imgH / 2
+ *
+ *   For rotation we translate the canvas origin to (cx, cy), rotate, then
+ *   draw at (-imgW/2, -imgH/2) so the pivot is the image center.
+ *
+ * @param {number} cx       Center X in canvas pixels (landmark anchor)
+ * @param {number} cy       Center Y in canvas pixels (landmark anchor)
+ * @param {number} imgW     Desired render width in pixels
+ * @param {number} [rot=0]  Rotation in radians (positive = clockwise)
+ * @param {number} [hMul=1] Vertical stretch multiplier (1 = natural aspect)
+ */
+function drawAssetCentered(cx, cy, imgW, rot, hMul) {
+  if (!prodImg || imgW <= 0) return;
+  rot  = rot  || 0;
+  hMul = hMul || 1;
+  const aspect = prodImg.naturalHeight / prodImg.naturalWidth;
+  const imgH   = imgW * aspect * hMul;
+  ctx.save();
+  ctx.translate(cx, cy);          // move canvas origin to the anchor point
+  ctx.rotate(rot);                 // rotate around that anchor
+  ctx.drawImage(prodImg, -imgW / 2, -imgH / 2, imgW, imgH);  // center on origin
+  ctx.restore();
+}
+
+/**
+ * drawAssetAtLandmark — draw the product image centered on a landmark pixel.
+ *
+ * Implements the explicit center-alignment formula:
+ *   x = lmPx.x - imgWidth  / 2
+ *   y = lmPx.y - imgHeight / 2
+ *
+ * Used for earrings: draw the asset TWICE (once per ear) with the CENTER
+ * of each image aligned exactly on its respective earlobe landmark.
+ *
+ * @param {object} lmPx   Canvas pixel point {x,y} (already converted)
+ * @param {number} imgW   Desired render width in pixels
+ * @param {number} [rot]  Optional rotation in radians
+ */
+function drawAssetAtLandmark(lmPx, imgW, rot) {
+  if (!prodImg || imgW <= 0) return;
+  rot = rot || 0;
+  const aspect = prodImg.naturalHeight / prodImg.naturalWidth;
+  const imgH   = imgW * aspect;
+  ctx.save();
+  ctx.translate(lmPx.x, lmPx.y);  // pivot = the landmark center
+  ctx.rotate(rot);
+  // Center-alignment: top-left = landmark_center - half_dimensions
+  ctx.drawImage(prodImg, -imgW / 2, -imgH / 2, imgW, imgH);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FACE MESH CALLBACK  — sunglasses | earrings | necklaces
+//
+// FaceMesh landmark indices used:
+//    33 — left  outer eye corner   (glasses scale reference)
+//   263 — right outer eye corner   (glasses scale reference)
+//   168 — nose bridge              (glasses anchor)
+//   132 — left  earlobe            (earring anchor — requires refineLandmarks:true)
+//   361 — right earlobe            (earring anchor — requires refineLandmarks:true)
+//   234 — left  cheek edge         (face width reference)
+//   454 — right cheek edge         (face width reference)
+//   152 — chin tip                 (necklace anchor)
+// ═══════════════════════════════════════════════════════════════════════════
+function onFaceResults(results) {
+  // Clear every frame — prevents ghosting from the previous frame
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Draw live video as the background layer first
+  drawFrame(results.image);
+
+  if (!results.multiFaceLandmarks || !results.multiFaceLandmarks.length) {
+    setTracking('none');
+    return;
+  }
+  setTracking('good');
+  setStatus('', '', true);  // hide loading overlay
+
+  const face = results.multiFaceLandmarks[0];
+
+  // ── SUNGLASSES ────────────────────────────────────────────────────────────
+  if (AR_CATEGORY === 'sunglasses') {
+    // Step 1: Get outer eye corner landmarks for scale measurement.
+    // lm 33 = left outer eye corner, lm 263 = right outer eye corner.
+    const lEye = toLandmarkPx(face[33]);
+    const rEye = toLandmarkPx(face[263]);
+
+    // Step 2: Measure the pixel distance between the outer eye corners.
+    // This is our scale reference — glasses width = 1.5× this span.
+    const eyeSpan = dist(lEye, rEye);
+
+    // Step 3: Calculate head tilt so the glasses rotate with the head.
+    const tilt = lineAngle(lEye, rEye);
+
+    // Step 4: Find the horizontal center between the two eye corners.
+    // This is where the center of the glasses frame should sit.
+    const cx = (lEye.x + rEye.x) / 2;
+    const cy = (lEye.y + rEye.y) / 2;
+
+    // Step 5: Draw the transparent glasses PNG.
+    // drawAssetCentered places the CENTER of the image exactly at (cx, cy).
+    // The image is a transparent PNG containing only the glasses shape.
+    drawAssetCentered(cx, cy, eyeSpan * 1.5, tilt);
+
+  // ── EARRINGS ──────────────────────────────────────────────────────────────
+  } else if (AR_CATEGORY === 'earrings') {
+    // Step 1: Get earlobe landmarks.
+    // lm 132 = left earlobe, lm 361 = right earlobe.
+    // These are available when refineLandmarks: true is set.
+    const lLobe = toLandmarkPx(face[132]);
+    const rLobe = toLandmarkPx(face[361]);
+
+    // Step 2: Measure face width for proportional earring sizing.
+    const faceW = dist(toLandmarkPx(face[234]), toLandmarkPx(face[454]));
+
+    // Earring render size = 18% of face width
+    const size = faceW * 0.18;
+
+    // Step 3: Drop the earring center slightly below the lobe so it "hangs".
+    const dropY = size * 0.5;
+
+    // Step 4: Draw the earring asset TWICE — once per ear.
+    // drawAssetAtLandmark implements:
+    //   x = landmark.x - imgWidth  / 2
+    //   y = landmark.y - imgHeight / 2
+    // so the CENTER of the image lands exactly on the earlobe landmark.
+    drawAssetAtLandmark({ x: lLobe.x, y: lLobe.y + dropY }, size);
+    drawAssetAtLandmark({ x: rLobe.x, y: rLobe.y + dropY }, size);
+
+  // ── NECKLACES ─────────────────────────────────────────────────────────────
+  } else if (AR_CATEGORY === 'necklaces') {
+    const chin  = toLandmarkPx(face[152]);
+    const faceW = dist(toLandmarkPx(face[234]), toLandmarkPx(face[454]));
+    // Drop center below chin by 55% of face width
+    drawAssetCentered(chin.x, chin.y + faceW * 0.55, faceW * 1.1);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HANDS CALLBACK  — watches | bags
+// Landmark indices:  0 = wrist,  9 = middle-finger MCP (palm center)
+// ═══════════════════════════════════════════════════════════════════════════
+function onHandResults(results) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFrame(results.image);
+
+  if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+    setTracking('none');
+    return;
+  }
+  setTracking('good');
+  setStatus('', '', true);
+
+  const hand    = results.multiHandLandmarks[0];
+  const wrist   = toLandmarkPx(hand[0]);
+  const midMCP  = toLandmarkPx(hand[9]);
+  const handLen = dist(wrist, midMCP);
+
+  if (AR_CATEGORY === 'watches') {
+    // Watch band is perpendicular to the hand axis → add 90° to the angle
+    const rot = lineAngle(wrist, midMCP) + Math.PI / 2;
+    drawAssetCentered(wrist.x, wrist.y, handLen * 0.9, rot);
+  } else if (AR_CATEGORY === 'bags') {
+    drawAssetCentered(midMCP.x, midMCP.y + handLen * 1.2, handLen * 2.0);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POSE CALLBACK  — all clothing categories
+//
+// Landmark indices:
+//   11/12 — left/right shoulder    23/24 — left/right hip
+//   25/26 — left/right knee        27/28 — left/right ankle
+//   31/32 — left/right foot tip
+// ═══════════════════════════════════════════════════════════════════════════
+function onPoseResults(results) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawFrame(results.image);
+
+  if (!results.poseLandmarks) { setTracking('none'); return; }
+
+  const L = results.poseLandmarks;
+  const p = i => toLandmarkPx(L[i]);  // index → canvas pixel
+
+  const lSh  = p(11), rSh  = p(12);
+  const lHip = p(23), rHip = p(24);
+  const lKn  = p(25), rKn  = p(26);
+  const lAnk = p(27), rAnk = p(28);
+  const lFt  = p(31), rFt  = p(32);
+
+  const shMid   = mid(lSh, rSh);
+  const hipMid  = mid(lHip, rHip);
+  const shDist  = dist(lSh, rSh);
+  const hipDist = dist(lHip, rHip);
+  const shAngle  = lineAngle(rSh, lSh);    // shoulder tilt
+  const hipAngle = lineAngle(rHip, lHip);  // hip tilt
+
+  const vis  = [L[11].visibility, L[12].visibility, L[23].visibility, L[24].visibility];
+  const avgV = vis.reduce((a, b) => a + b, 0) / 4;
+  setTracking(avgV > 0.7 ? 'good' : avgV > 0.4 ? 'ok' : 'poor');
+  setStatus('', '', true);
+
+  // Natural aspect ratio of the product image (height / width)
+  const imgAR = prodImg ? prodImg.naturalHeight / prodImg.naturalWidth : 1;
+
+  switch (AR_CATEGORY) {
+
+    // Upper-body clothing — anchor at shoulder midpoint, width = shoulder span × 1.6
+    case 'tops': case 'shirts': case 't-shirts':
+    case 'jackets': case 'boys': case 'girls': case 'infants': {
+      const w    = shDist * 1.6;
+      const hMul = dist(shMid, hipMid) / (w * imgAR);  // stretch to fill torso
+      drawAssetCentered(shMid.x, shMid.y, w, shAngle, Math.max(hMul, 1));
+      break;
+    }
+
+    // Full-length dresses — shoulder midpoint → ankle midpoint
+    case 'dresses': {
+      const w    = shDist * 1.65;
+      const hMul = dist(shMid, mid(lAnk, rAnk)) / (w * imgAR);
+      drawAssetCentered(shMid.x, shMid.y, w, shAngle, Math.max(hMul, 1));
+      break;
+    }
+
+    // Belts — thin strip at hip midpoint
+    case 'belts': {
+      drawAssetCentered(hipMid.x, hipMid.y, hipDist * 1.35, hipAngle, 0.22);
+      break;
+    }
+
+    // Skirts — hip midpoint → knee midpoint
+    case 'skirts': {
+      const w    = hipDist * 1.55;
+      const hMul = dist(hipMid, mid(lKn, rKn)) / (w * imgAR);
+      drawAssetCentered(hipMid.x, hipMid.y, w, hipAngle, Math.max(hMul, 1));
+      break;
+    }
+
+    // Jeans — hip midpoint → ankle midpoint
+    case 'jeans': {
+      const w    = hipDist * 1.45;
+      const hMul = dist(hipMid, mid(lAnk, rAnk)) / (w * imgAR);
+      drawAssetCentered(hipMid.x, hipMid.y, w, hipAngle, Math.max(hMul, 1));
+      break;
+    }
+
+    // Shoes / heels — one per foot, rotated along ankle→toe axis
+    case 'shoes': case 'heels': {
+      const shoeW = shDist * 0.32;
+      drawAssetCentered(lFt.x, lFt.y, shoeW, lineAngle(lAnk, lFt));
+      drawAssetCentered(rFt.x, rFt.y, shoeW, lineAngle(rAnk, rFt));
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MEDIAPIPE CAMERA UTILITY — feeds video frames into the solution each frame
+// ═══════════════════════════════════════════════════════════════════════════
+function startMPCamera() {
+  mpCamera = new Camera(video, {
+    onFrame: async () => { await mpSolution.send({ image: video }); },
+    width:  canvas.width,
+    height: canvas.height,
+  });
+  mpCamera.start();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODEL INIT — lazy-loads only the required MediaPipe solution
+// ═══════════════════════════════════════════════════════════════════════════
+async function initModel() {
+  setStatus('Loading AI model…', 'Downloading only what this product needs.');
+
+  if (AR_MODE === 'face') {
+    await loadScript(`${MP}/face_mesh/face_mesh.js`);
+    await loadScript(`${MP}/camera_utils/camera_utils.js`);
+    const fm = new FaceMesh({ locateFile: f => `${MP}/face_mesh/${f}` });
+    fm.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,   // REQUIRED: enables earlobe (132/361) landmarks
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+    fm.onResults(onFaceResults);
+    mpSolution = fm;
+
+  } else if (AR_MODE === 'hands') {
+    await loadScript(`${MP}/hands/hands.js`);
+    await loadScript(`${MP}/camera_utils/camera_utils.js`);
+    const h = new Hands({ locateFile: f => `${MP}/hands/${f}` });
+    h.setOptions({ maxNumHands: 1, modelComplexity: 1,
+                   minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+    h.onResults(onHandResults);
+    mpSolution = h;
+
+  } else {
+    await loadScript(`${MP}/pose/pose.js`);
+    await loadScript(`${MP}/camera_utils/camera_utils.js`);
+    const pose = new Pose({ locateFile: f => `${MP}/pose/${f}` });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true,
+                      enableSegmentation: false,
+                      minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onPoseResults);
+    mpSolution = pose;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════════════
+async function boot() {
+  try { await loadProductImage(); }
+  catch (e) { console.warn('Product image load failed:', e.message); }
+
+  const camOk = await startCamera();
+  if (!camOk) return;
+
+  try { await initModel(); }
+  catch (e) { setStatus('Model Load Failed', e.message || 'Could not load AI model.'); return; }
+
+  setStatus('', '', true);
+  startMPCamera();
+}
+
+window.addEventListener('load', boot);
+window.addEventListener('beforeunload', () => {
+  if (mpCamera) mpCamera.stop();
+  if (stream)   stream.getTracks().forEach(t => t.stop());
+});
+</script>
+{% endblock %}

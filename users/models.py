@@ -13,9 +13,9 @@ class User(AbstractUser):
     
     email = models.EmailField(unique=True)
     phone_number = models.CharField(
-        max_length=15, 
-        unique=True, 
-        null=True, 
+        max_length=15,
+        unique=True,
+        null=True,
         blank=True,
         validators=[phone_regex]
     )

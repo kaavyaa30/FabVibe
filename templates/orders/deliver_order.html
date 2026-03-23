@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirm Delivery — FabVibe{% endblock %}
+
+{% block extra_css %}
+<style>
+.deliver-wrap {
+  min-height: 80vh;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8eef2 100%);
+  padding: 2rem 1rem;
+}
+.deliver-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.12);
+  width: 100%; max-width: 460px;
+  overflow: hidden;
+}
+.deliver-header {
+  background: linear-gradient(135deg, #456273 0%, #2c3e50 100%);
+  padding: 2rem 2rem 1.5rem;
+  text-align: center; color: #fff;
+}
+.deliver-header .brand { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
+.deliver-header .sub   { opacity: .75; font-size: .85rem; margin-top: 4px; }
+.deliver-header .icon-wrap {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1rem; font-size: 1.8rem;
+}
+.deliver-body { padding: 2rem; }
+
+/* OTP input */
+.otp-input {
+  font-size: 2rem; font-weight: 700; letter-spacing: .4em;
+  text-align: center; border: 2px solid #dee2e6;
+  border-radius: 12px; padding: .6rem 1rem;
+  font-family: 'Courier New', monospace;
+  transition: border-color .2s, box-shadow .2s;
+}
+.otp-input:focus {
+  border-color: #456273;
+  box-shadow: 0 0 0 4px rgba(69,98,115,.15);
+  outline: none;
+}
+
+/* Submit button */
+.btn-deliver {
+  background: linear-gradient(135deg, #456273, #2c3e50);
+  color: #fff; border: none; border-radius: 12px;
+  padding: .85rem; font-size: 1rem; font-weight: 700;
+  width: 100%; transition: opacity .2s, transform .15s;
+}
+.btn-deliver:hover { opacity: .9; transform: translateY(-1px); color: #fff; }
+
+/* Result states */
+.result-icon { font-size: 4rem; margin-bottom: 1rem; }
+.result-title { font-size: 1.4rem; font-weight: 800; margin-bottom: .5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="deliver-wrap">
+  <div class="deliver-card">
+
+    <!-- Header -->
+    <div class="deliver-header">
+      <div class="icon-wrap">🚚</div>
+      <div class="brand">FabVibe</div>
+      <div class="sub">Delivery Executive Portal</div>
+    </div>
+
+    <div class="deliver-body">
+
+      <!-- ── SUCCESS ── -->
+      {% if result == 'success' %}
+      <div class="text-center py-2">
+        <div class="result-icon">✅</div>
+        <div class="result-title" style="color:#28a745;">Delivery Confirmed!</div>
+        <p class="text-muted mb-1">
+          Order <strong style="color:#456273;">{{ order.order_id }}</strong>
+          has been marked as <strong>Delivered</strong>.
+        </p>
+        <p class="text-muted small mb-4">
+          The customer has been notified and cashback (if applicable) has been credited.
+        </p>
+        <div class="p-3 rounded mb-4" style="background:#f0f9f0; border:1px solid #c3e6cb;">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Customer</span>
+            <strong>{{ order.user.get_full_name|default:order.user.email }}</strong>
+          </div>
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Order ID</span>
+            <strong>{{ order.order_id }}</strong>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span class="text-muted">Delivered At</span>
+            <strong>{{ order.delivered_at|date:"d M Y, H:i" }}</strong>
+          </div>
+        </div>
+        <a href="{% url 'orders:deliver_order' %}" class="btn-deliver btn d-block">
+          Confirm Another Delivery
+        </a>
+      </div>
+
+      <!-- ── ALREADY DELIVERED ── -->
+      {% elif result == 'already' %}
+      <div class="text-center py-2">
+        <div class="result-icon">📦</div>
+        <div class="result-title" style="color:#456273;">Already Delivered</div>
+        <p class="text-muted mb-4">
+          Order <strong>{{ order.order_id }}</strong> has already been confirmed as delivered.
+        </p>
+        <a href="{% url 'orders:deliver_order' %}" class="btn-deliver btn d-block">
+          Go Back
+        </a>
+      </div>
+
+      <!-- ── FORM ── -->
+      {% else %}
+      <h5 class="fw-bold mb-1" style="color:#2c3e50;">Confirm Delivery</h5>
+      <p class="text-muted small mb-4">
+        Enter the Order ID and the 6-digit OTP provided by the customer to complete delivery.
+      </p>
+
+      {% if error %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2" style="font-size:.9rem; border-radius:10px;">
+        <i class="fas fa-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" autocomplete="off">
+        {% csrf_token %}
+
+        <!-- Order ID -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold small" style="color:#456273; text-transform:uppercase; letter-spacing:.5px;">
+            Order ID
+          </label>
+          <input type="text" name="order_id"
+                 class="form-control form-control-lg"
+                 placeholder="e.g. ORD-AB12CD34"
+                 value="{{ request.POST.order_id|default:'' }}"
+                 style="border-radius:10px; border:2px solid #dee2e6; font-weight:600; text-transform:uppercase;"
+                 required autofocus>
+          <small class="text-muted">Found on the delivery slip or customer's order page.</small>
+        </div>
+
+        <!-- OTP -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold small" style="color:#456273; text-transform:uppercase; letter-spacing:.5px;">
+            Customer OTP
+          </label>
+          <input type="text" name="otp"
+                 class="otp-input form-control"
+                 maxlength="6" minlength="6"
+                 pattern="\d{6}"
+                 placeholder="• • • • • •"
+                 inputmode="numeric"
+                 required>
+          <small class="text-muted">Ask the customer for the 6-digit OTP sent to their email.</small>
+        </div>
+
+        <button type="submit" class="btn-deliver btn">
+          <i class="fas fa-check-circle me-2"></i>Confirm Delivery
+        </button>
+      </form>
+
+      <p class="text-center text-muted mt-3 mb-0" style="font-size:.78rem;">
+        <i class="fas fa-lock me-1"></i>
+        Only verify OTP in person at the delivery address.
+      </p>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-uppercase the order ID field as user types
+document.querySelector('input[name="order_id"]')?.addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
+});
+// Only allow digits in OTP field
+document.querySelector('input[name="otp"]')?.addEventListener('input', function() {
+  this.value = this.value.replace(/\D/g, '').slice(0, 6);
+});
+</script>
+{% endblock %}

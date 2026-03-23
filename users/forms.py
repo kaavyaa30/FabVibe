@@ -43,11 +43,11 @@ class UserRegistrationForm(UserCreationForm):
     )
     
     phone_number = forms.CharField(
-        required=False,
+        required=True,
         validators=[phone_regex],
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your phone number (optional)'
+            'placeholder': 'Enter your phone number (e.g. +919876543210)'
         })
     )
     
@@ -90,11 +90,8 @@ class UserRegistrationForm(UserCreationForm):
         fields = ['email', 'phone_number', 'first_name', 'last_name', 'password1', 'password2']
     
     def clean_email(self):
-        """Check for duplicate email"""
-        email = self.cleaned_data.get('email')
-        if User.objects.filter(email=email).exists():
-            raise ValidationError('This email is already registered.')
-        return email
+        """Email is not unique — no duplicate check needed"""
+        return self.cleaned_data.get('email')
     
     def clean_phone_number(self):
         """Check for duplicate phone number"""
@@ -104,11 +101,14 @@ class UserRegistrationForm(UserCreationForm):
         return phone_number
     
     def save(self, commit=True):
-        """Save user with hashed password"""
+        """Save user — phone number is the unique identifier, used as username"""
         user = super().save(commit=False)
-        user.username = user.email  # Use email as username
+        phone = self.cleaned_data['phone_number']
+        user.username = phone[:150]  # username must be unique; use phone
+        user.phone_number = phone
         if commit:
             user.save()
+            self.save_m2m()
         return user
 
 

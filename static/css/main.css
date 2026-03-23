@@ -636,6 +636,14 @@ body {
     font-size: 0.85rem;
 }
 
+/* Cancelled status — solid dark red, white text, high contrast */
+.order-status.cancelled,
+.status-cancelled,
+.s-cancelled {
+    background-color: #c0392b !important;
+    color: #fff !important;
+}
+
 .bg-success {
     background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
 }
@@ -673,31 +681,10 @@ body {
 
 /* ===== New Arrivals Section ===== */
 .new-arrivals {
-    background-image: url('/static/images/new-arrivals-bg.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: #f8f9fa;
     padding: 4rem 0;
     margin: 4rem 0;
-    position: relative;
     border-radius: var(--border-radius);
-    overflow: hidden;
-}
-
-.new-arrivals::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.92);
-    z-index: 0;
-}
-
-.new-arrivals > * {
-    position: relative;
-    z-index: 1;
 }
 
 /* ===== Footer ===== */
@@ -1050,8 +1037,16 @@ html {
 /* ===== Filter Sidebar ===== */
 .card-header {
     background: linear-gradient(135deg, var(--accent-color) 0%, #3d5a6b 100%) !important;
+    color: #fff !important;
     border: none;
     padding: 1rem 1.5rem;
+}
+
+.card-header *,
+.card-header h1, .card-header h2, .card-header h3,
+.card-header h4, .card-header h5, .card-header h6,
+.card-header p, .card-header span, .card-header strong {
+    color: #fff !important;
 }
 
 .filter-options {

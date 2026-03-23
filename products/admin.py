@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductImage, ProductSize, ProductColor, Inventory, Wishlist, Banner, Review, InventoryLog
+from .models import Category, Product, ProductImage, ProductSize, ProductColor, Inventory, Wishlist, Banner, Review, InventoryLog, TryOnHistory
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -74,3 +74,12 @@ class InventoryLogAdmin(admin.ModelAdmin):
     search_fields = ['product__name', 'admin__email', 'reason']
     ordering = ['-timestamp']
     readonly_fields = ['timestamp']
+
+
+@admin.register(TryOnHistory)
+class TryOnHistoryAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__email', 'product__name']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at']

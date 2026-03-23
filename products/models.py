@@ -196,3 +196,79 @@ class InventoryLog(models.Model):
     class Meta:
         db_table = 'inventory_logs'
         ordering = ['-timestamp']
+
+
+class UserProfile(models.Model):
+    """Stores body measurements for size recommendations."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    height_cm  = models.PositiveSmallIntegerField(null=True, blank=True)
+    weight_kg  = models.PositiveSmallIntegerField(null=True, blank=True)
+    chest_cm   = models.PositiveSmallIntegerField(null=True, blank=True)
+    waist_cm   = models.PositiveSmallIntegerField(null=True, blank=True)
+    hips_cm    = models.PositiveSmallIntegerField(null=True, blank=True)
+    preferred_size = models.CharField(max_length=5, blank=True)
+
+    def recommended_size(self):
+        """Return recommended size based on chest/waist measurements (women's standard)."""
+        chest = self.chest_cm
+        waist = self.waist_cm
+        if not chest and not waist:
+            return self.preferred_size or ''
+        val = chest or (waist + 10 if waist else 0)
+        if val <= 84:   return 'XS'
+        if val <= 89:   return 'S'
+        if val <= 94:   return 'M'
+        if val <= 99:   return 'L'
+        if val <= 104:  return 'XL'
+        return 'XXL'
+
+    class Meta:
+        db_table = 'user_profiles'
+
+
+class RecentlyViewed(models.Model):
+    """Tracks which products a user has viewed."""
+    user    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recently_viewed')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='viewed_by')
+    viewed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'recently_viewed'
+        ordering = ['-viewed_at']
+        unique_together = [('user', 'product')]
+
+
+class StockAlert(models.Model):
+    """User subscribes to be notified when a product/size is back in stock."""
+    user     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stock_alerts')
+    product  = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_alerts')
+    size     = models.CharField(max_length=10, blank=True)
+    notified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'stock_alerts'
+        unique_together = [('user', 'product', 'size')]
+
+
+class TryOnHistory(models.Model):
+    """Records each Virtual Try-On session for a user."""
+    user           = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                       related_name='tryon_history')
+    product        = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='tryon_history')
+    original_image = models.ImageField(upload_to='tryon_originals/')
+    result_image   = models.ImageField(upload_to='tryon_results/')
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        product_name = self.product.name if self.product else 'deleted product'
+        return f"{self.user} tried {product_name} on {self.created_at:%Y-%m-%d}"
+
+    class Meta:
+        db_table = 'tryon_history'
+        ordering = ['-created_at']
+
+
+
+
