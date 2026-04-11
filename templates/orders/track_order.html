@@ -5,121 +5,72 @@
 
 {% block extra_css %}
 <style>
-/* ── Page hero ── */
+/* Track order page-specific styles */
 .track-hero {
-  background: linear-gradient(135deg, #456273 0%, #2c3e50 100%);
-  color: #fff; padding: 2.5rem 0 2rem;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: #fff; padding: 2rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.75rem;
 }
-.track-hero h2 { font-size: 1.6rem; font-weight: 800; margin: 0; color: #fff; }
-.track-hero p  { opacity: .8; margin: .3rem 0 0; font-size: .9rem; color: #fff; }
+.track-hero h2 { font-size: 1.5rem; font-weight: 800; margin: 0; color: #fff; }
+.track-hero p  { opacity: .8; margin: .25rem 0 0; font-size: .875rem; color: #fff; }
 
-/* ── OTP alert banner ── */
 .otp-banner {
   background: linear-gradient(135deg, #fff8e1, #fff3cd);
   border: 2px solid #ffc107;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 1.5rem 2rem;
   margin-bottom: 1.5rem;
-  animation: pulse-border 2s ease-in-out infinite;
-}
-@keyframes pulse-border {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,193,7,.4); }
-  50%       { box-shadow: 0 0 0 8px rgba(255,193,7,0); }
 }
 .otp-code {
-  font-size: 3rem; font-weight: 800; letter-spacing: .35em;
-  color: #456273; font-family: 'Courier New', monospace;
-  line-height: 1;
+  font-size: 2.75rem; font-weight: 800; letter-spacing: .35em;
+  color: var(--brand); font-family: 'Courier New', monospace; line-height: 1;
 }
 
-/* ── Timeline ── */
 .timeline { position: relative; padding: .5rem 0; }
 .timeline::before {
   content: ''; position: absolute;
   left: 28px; top: 0; bottom: 0; width: 3px;
-  background: #dee2e6; border-radius: 2px;
+  background: var(--border); border-radius: 2px;
 }
-
 .tl-step { display: flex; align-items: flex-start; gap: 1.1rem; margin-bottom: 2rem; position: relative; }
 .tl-step:last-child { margin-bottom: 0; }
-
-/* Filled connector for completed steps */
-.tl-step.done::before,
-.tl-step.active::before {
+.tl-step.done::before, .tl-step.active::before {
   content: ''; position: absolute;
   left: 28px; top: 40px; width: 3px;
-  background: #456273; border-radius: 2px;
+  background: var(--brand); border-radius: 2px;
 }
 .tl-step.done::before  { height: calc(100% + 2rem); }
 .tl-step.active::before { height: 0; }
-
-/* Icon circle */
 .tl-icon {
   width: 58px; height: 58px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; position: relative; z-index: 1;
-  font-size: 1.3rem; transition: transform .2s;
+  flex-shrink: 0; position: relative; z-index: 1; font-size: 1.2rem;
 }
-.tl-icon.done   { background: #456273; color: #fff; box-shadow: 0 4px 12px rgba(69,98,115,.35); }
-.tl-icon.active {
-  background: #fff; color: #456273;
-  border: 3px solid #456273;
-  box-shadow: 0 0 0 6px rgba(69,98,115,.15), 0 4px 16px rgba(69,98,115,.25);
-  animation: icon-pulse 1.8s ease-in-out infinite;
-}
-.tl-icon.pending { background: #f0f0f0; color: #adb5bd; border: 2px solid #dee2e6; }
-@keyframes icon-pulse {
-  0%, 100% { box-shadow: 0 0 0 6px rgba(69,98,115,.15), 0 4px 16px rgba(69,98,115,.25); }
-  50%       { box-shadow: 0 0 0 10px rgba(69,98,115,.08), 0 4px 16px rgba(69,98,115,.25); }
-}
-
-/* Text */
-.tl-label {
-  font-size: 1rem; font-weight: 700;
-  color: #2c3e50; margin: 0 0 2px;
-}
-.tl-label.pending { color: #adb5bd; font-weight: 500; }
-.tl-meta { font-size: .82rem; color: #888; }
+.tl-icon.done   { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(69,98,115,.3); }
+.tl-icon.active { background: #fff; color: var(--brand); border: 3px solid var(--brand); box-shadow: 0 0 0 6px rgba(69,98,115,.12); }
+.tl-icon.pending { background: var(--bg); color: var(--text-light); border: 2px solid var(--border); }
+.tl-label { font-size: .95rem; font-weight: 700; color: var(--text-dark); margin: 0 0 2px; }
+.tl-label.pending { color: var(--text-light); font-weight: 500; }
+.tl-meta { font-size: .8rem; color: var(--text-light); }
 .tl-current-tag {
-  display: inline-block; background: #456273; color: #fff;
-  font-size: .7rem; font-weight: 700; padding: 2px 10px;
+  display: inline-block; background: var(--brand); color: #fff;
+  font-size: .68rem; font-weight: 700; padding: 2px 9px;
   border-radius: 20px; margin-left: 8px; vertical-align: middle;
-  text-transform: uppercase; letter-spacing: .5px;
+  text-transform: uppercase; letter-spacing: .04em;
 }
-
-/* ── Progress bar ── */
-.progress-track {
-  height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;
-}
-.progress-fill {
-  height: 100%; background: linear-gradient(90deg, #456273, #2c3e50);
-  border-radius: 4px; transition: width .6s ease;
-}
-
-/* ── Cards ── */
-.track-card {
-  border: none; border-radius: 16px;
-  box-shadow: 0 2px 16px rgba(0,0,0,.07);
-  margin-bottom: 1.5rem;
-}
-.track-card .card-header {
-  background: none; border-bottom: 1px solid #f0f0f0;
-  padding: 1.1rem 1.5rem; font-weight: 700; color: #456273;
-  font-size: .95rem;
-}
+.progress-track { height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.progress-fill  { height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-dark)); border-radius: 4px; transition: width .6s ease; }
+.track-card { border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); margin-bottom: 1.25rem; }
+.track-card .card-header { background: none; border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; font-weight: 700; color: var(--brand); font-size: .9rem; }
 .track-card .card-body { padding: 1.5rem; }
-
-/* ── Status badge ── */
-.s-badge {
-  padding: .4rem 1rem; border-radius: 20px;
-  font-size: .8rem; font-weight: 700; text-transform: uppercase;
-}
-.s-pending         { background: #fff3cd; color: #856404; }
-.s-processing      { background: #cfe2ff; color: #084298; }
-.s-shipped         { background: #d1ecf1; color: #0c5460; }
-.s-out_for_delivery{ background: #d1e7dd; color: #0f5132; }
-.s-delivered       { background: #d4edda; color: #155724; }
-.s-cancelled       { background: #c0392b; color: #fff; }
+.s-badge { padding: .35rem .9rem; border-radius: 20px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.s-pending         { background: #fef3c7; color: #92400e; }
+.s-processing      { background: #ede9fe; color: #4c1d95; }
+.s-shipped         { background: #dbeafe; color: #1e40af; }
+.s-out_for_delivery{ background: #d1fae5; color: #065f46; }
+.s-delivered       { background: #d1fae5; color: #065f46; }
+.s-cancelled       { background: var(--danger); color: #fff; }
 </style>
 {% endblock %}
 

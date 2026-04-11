@@ -5,26 +5,18 @@
 
 {% block extra_css %}
 <style>
-.mgmt-header { background: linear-gradient(135deg,#456273,#3d5a6b); color:#fff; padding:2rem 0 1.5rem; margin-bottom:2rem; border-radius:0 0 12px 12px; }
+.mgmt-header { background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color:#fff; padding:1.75rem 2rem; margin-bottom:1.75rem; border-radius:var(--radius-lg); }
 .mgmt-header h1, .mgmt-header p { color:#fff; }
-.filter-bar { background:#fff; border:1px solid #e0e0e0; border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
-.orders-table th { background:#f8f9fa; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; font-weight:600; border-bottom:2px solid #dee2e6; }
+.filter-bar { background:var(--white); border:1px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; margin-bottom:1.5rem; }
+.orders-table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
 .orders-table td { vertical-align:middle; }
-.orders-table tbody tr:hover { background:#f8f9fa; }
-.status-badge { padding:.3rem .85rem; border-radius:20px; font-weight:600; font-size:.75rem; text-transform:uppercase; white-space:nowrap; }
-.status-pending        { background:#fff3cd; color:#856404; }
-.status-processing     { background:#cfe2ff; color:#084298; }
-.status-shipped        { background:#d1ecf1; color:#0c5460; }
-.status-out_for_delivery { background:#d1e7dd; color:#0f5132; }
-.status-delivered      { background:#d4edda; color:#155724; }
-.status-cancelled      { background:#c0392b; color:#fff; }
-.pay-completed { color:#198754; font-weight:600; }
-.pay-pending   { color:#856404; font-weight:600; }
-.pay-failed    { color:#dc3545; font-weight:600; }
-.order-id-link { font-family:monospace; font-weight:700; color:#456273; text-decoration:none; }
+.order-id-link { font-family:monospace; font-weight:700; color:var(--brand); text-decoration:none; }
 .order-id-link:hover { text-decoration:underline; }
-.stat-pill { background:#f0f4f6; border-radius:8px; padding:.5rem 1rem; font-size:.85rem; color:#2c3e50; }
-.stat-pill span { font-weight:700; color:#456273; }
+.stat-pill { background:var(--brand-pale); border-radius:var(--radius); padding:.5rem 1rem; font-size:.85rem; color:var(--text-dark); }
+.stat-pill span { font-weight:700; color:var(--brand); }
+.pay-completed { color:var(--success); font-weight:600; }
+.pay-pending   { color:var(--warning); font-weight:600; }
+.pay-failed    { color:var(--danger); font-weight:600; }
 </style>
 {% endblock %}
 
@@ -32,20 +24,16 @@
 
 <!-- Header -->
 <div class="mgmt-header">
-  <div class="container">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <div>
-        <h1 class="mb-1"><i class="fas fa-clipboard-list me-2"></i>Order Management</h1>
-        <p class="mb-0 opacity-75">View and update all customer orders</p>
-      </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <div class="stat-pill"><span>{{ orders|length }}</span> orders shown</div>
-      </div>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h1 class="mb-1"><i class="fas fa-clipboard-list me-2"></i>Order Management</h1>
+      <p class="mb-0 opacity-75">View and update all customer orders</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="stat-pill"><span>{{ orders|length }}</span> orders shown</div>
     </div>
   </div>
 </div>
-
-<div class="container">
 
   <!-- Filter Bar -->
   <div class="filter-bar">
@@ -148,5 +136,4 @@
     </div>
   </div>
 
-</div>
 {% endblock %}

@@ -18,93 +18,39 @@
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
     <!-- Modern Design CSS -->
     <link rel="stylesheet" href="{% static 'css/modern-design.css' %}">
-    
+
     <style>
-        /* Nested dropdown menu styles */
-        .dropdown-submenu {
-            position: relative;
+        /* ── Navbar responsive rules (must be inline to override Bootstrap) ── */
+        .mobile-quick-icons { display: none !important; }
+        .mobile-search-row  { display: none !important; }
+        #desktopSearchForm  { display: flex !important; }
+
+        @media (max-width: 991.98px) {
+            .mobile-quick-icons { display: flex !important; }
+            .mobile-search-row  { display: flex !important; }
+            #desktopSearchForm  { display: none !important; }
         }
-        
-        .dropdown-submenu .dropdown-menu {
-            top: 0;
-            left: 100%;
-            margin-top: -1px;
-        }
-        
-        .dropdown-submenu:hover > .dropdown-menu {
-            display: block;
-        }
-        
+
+        /* Navbar icon sizing */
+        .mobile-quick-icons .nav-link { padding: .3rem .45rem !important; }
+        .mobile-quick-icons .nav-link i { font-size: 1.2rem; color: #fff; }
+        .mobile-quick-icons .nav-link[href*="wishlist"] i.fas { color: #f87171; }
+
+        /* Desktop wishlist/cart icons inside collapsible */
+        .navbar-nav .nav-link.position-relative { padding: .4rem .6rem !important; }
+        .navbar-nav .nav-link.position-relative i { font-size: 1.15rem; }
+        .navbar-nav .nav-link[href*="wishlist"] i.fas.fa-heart { color: #f87171; }
+
+        /* Dropdown submenu */
+        .dropdown-submenu { position: relative; }
+        .dropdown-submenu .dropdown-menu { top: 0; left: 100%; margin-top: -1px; }
+        .dropdown-submenu:hover > .dropdown-menu { display: block; }
         .dropdown-submenu > .dropdown-toggle::after {
-            transform: rotate(-90deg);
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            margin-top: -2px;
-        }
-        
-        body {
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        /* Wishlist and Cart Icon Styles */
-        .nav-link.position-relative {
-            padding: 0.5rem 1rem;
-        }
-        
-        .nav-link.position-relative i {
-            font-size: 1.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link.position-relative:hover i {
-            transform: scale(1.15);
-            color: #ffffff;
-        }
-        
-        .nav-link.position-relative .badge {
-            font-size: 0.7rem;
-            padding: 0.3em 0.6em;
-            min-width: 1.8em;
-            height: 1.8em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-        
-        /* Heart icon color for wishlist */
-        .nav-link[href*="wishlist"] i.fas.fa-heart {
-            color: #e74c3c;
-        }
-        
-        .nav-link[href*="wishlist"] i.far.fa-heart {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        .nav-link[href*="wishlist"]:hover i {
-            color: #ffffff !important;
-        }
-        
-        /* Cart icon color - Enhanced visibility */
-        .nav-link[href*="cart"] i {
-            color: #ffffff;
-            font-size: 1.6rem;
-            font-weight: 600;
-        }
-        
-        .nav-link[href*="cart"]:hover i {
-            color: #ffffff !important;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-        }
-        
-        /* Search button - Make it wider */
-        .btn-outline-primary {
-            min-width: 80px;
-            padding: 0.6rem 1.5rem;
+            transform: rotate(-90deg); position: absolute;
+            right: 10px; top: 50%; margin-top: -2px;
         }
     </style>
-    
+
     {% block extra_css %}{% endblock %}
 </head>
 <body data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
@@ -113,13 +59,63 @@
     
     <!-- Navigation Header -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
+        <div class="container flex-wrap">
+
+            <!-- Row 1: Brand | Mobile icons + Toggler -->
             <a class="navbar-brand" href="{% url 'products:home' %}">
                 <strong>FabVibe</strong>
             </a>
+
+            <!-- Mobile: wishlist / cart / user icons shown beside hamburger -->
+            <div class="mobile-quick-icons me-1">
+                {% if user.is_authenticated %}
+                <a class="nav-link position-relative" href="{% url 'products:wishlist' %}" title="Wishlist">
+                    <i class="fas fa-heart"></i>
+                    {% if wishlist_count and wishlist_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ wishlist_count }}</span>
+                    {% endif %}
+                </a>
+                <a class="nav-link position-relative" href="{% url 'cart:cart_detail' %}" title="Cart">
+                    <i class="fas fa-shopping-cart"></i>
+                    {% if cart_count and cart_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">{{ cart_count }}</span>
+                    {% endif %}
+                </a>
+                <a class="nav-link" href="{% url 'users:profile' %}" title="Profile">
+                    <i class="fas fa-user"></i>
+                </a>
+                {% else %}
+                <a class="nav-link position-relative" href="{% url 'products:wishlist' %}" title="Wishlist">
+                    <i class="far fa-heart"></i>
+                </a>
+                <a class="nav-link position-relative" href="{% url 'cart:cart_detail' %}" title="Cart">
+                    <i class="fas fa-shopping-cart"></i>
+                </a>
+                <a class="nav-link" href="{% url 'users:login' %}" title="Login">
+                    <i class="fas fa-sign-in-alt"></i>
+                </a>
+                {% endif %}
+            </div>
+
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
+            <!-- Row 2 (mobile only): Search bar below brand -->
+            <div class="mobile-search-row">
+                <form class="position-relative w-100" method="get" action="{% url 'products:search' %}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0" style="border-radius:20px 0 0 20px;">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input class="form-control border-start-0 ps-1" type="search" name="q"
+                               placeholder="Search products..." aria-label="Search" autocomplete="off"
+                               style="border-radius:0 20px 20px 0;">
+                    </div>
+                </form>
+            </div>
+
+            <!-- Collapsible nav -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
@@ -127,11 +123,6 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'products:dashboard' %}">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'products:photo_tryon' %}">
-                            <i class="fas fa-tshirt me-1"></i>Try-On
-                        </a>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="categoriesDropdown" role="button" data-bs-toggle="dropdown">
@@ -165,9 +156,9 @@
                         </ul>
                     </li>
                 </ul>
-                
-                <!-- Search Form -->
-                <form class="d-flex me-3 position-relative" method="get" action="{% url 'products:search' %}" id="searchForm">
+
+                <!-- Desktop search (hidden on mobile via CSS) -->
+                <form class="d-flex me-3 position-relative" method="get" action="{% url 'products:search' %}" id="desktopSearchForm">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0" style="border-radius:20px 0 0 20px;">
                             <i class="fas fa-search text-muted"></i>
@@ -176,72 +167,53 @@
                                placeholder="Search products..." aria-label="Search" autocomplete="off"
                                style="border-radius:0 20px 20px 0;">
                     </div>
-                    <!-- Auto-suggestions dropdown -->
                     <div id="searchSuggestions" class="position-absolute bg-white border rounded shadow-sm"
                          style="display:none;top:100%;left:0;right:0;z-index:1000;max-height:300px;overflow-y:auto;">
                     </div>
                 </form>
-                
-                <!-- User Menu -->
-                <ul class="navbar-nav">
+
+                <!-- Desktop: wishlist + cart icons + user dropdown -->
+                <ul class="navbar-nav align-items-center gap-1">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
                             <a class="nav-link position-relative" href="{% url 'products:wishlist' %}" title="Wishlist">
-                                <i class="fas fa-heart"></i>
+                                <i class="{% if wishlist_count and wishlist_count > 0 %}fas{% else %}far{% endif %} fa-heart"></i>
                                 {% if wishlist_count and wishlist_count > 0 %}
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                        {{ wishlist_count }}
-                                    </span>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">{{ wishlist_count }}</span>
                                 {% endif %}
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="{% url 'cart:cart_detail' %}" title="Shopping Cart">
+                            <a class="nav-link position-relative" href="{% url 'cart:cart_detail' %}" title="Cart">
                                 <i class="fas fa-shopping-cart"></i>
                                 {% if cart_count and cart_count > 0 %}
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary">
-                                        {{ cart_count }}
-                                    </span>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">{{ cart_count }}</span>
                                 {% endif %}
                             </a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-user"></i> {{ user.get_full_name|default:user.email }}
+                                <i class="fas fa-user me-1"></i>{{ user.get_full_name|default:user.email|truncatechars:18 }}
                             </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
-                                <li><a class="dropdown-item" href="{% url 'orders:order_history' %}">Orders</a></li>
-                                <li><a class="dropdown-item" href="{% url 'wallet:dashboard' %}"><i class="fas fa-wallet me-1"></i>Reward Wallet</a></li>
-                                <li><a class="dropdown-item" href="{% url 'products:tryon_history' %}"><i class="fas fa-tshirt me-1"></i>My Wardrobe</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="fas fa-user-circle me-2"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'orders:order_history' %}"><i class="fas fa-box me-2"></i>Orders</a></li>
+                                <li><a class="dropdown-item" href="{% url 'wallet:dashboard' %}"><i class="fas fa-wallet me-2"></i>Reward Wallet</a></li>
+                                <li><a class="dropdown-item" href="{% url 'products:tryon_history' %}"><i class="fas fa-tshirt me-2"></i>My Wardrobe</a></li>
                                 {% if user.is_staff %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'admin_panel:order_list' %}"><i class="fas fa-clipboard-list me-1"></i>Manage Orders</a></li>
+                                <li><a class="dropdown-item" href="{% url 'admin_panel:order_list' %}"><i class="fas fa-clipboard-list me-2"></i>Manage Orders</a></li>
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'users:logout' %}">Logout</a></li>
+                                <li><a class="dropdown-item" href="{% url 'users:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                             </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="{% url 'products:wishlist' %}" title="Wishlist">
-                                <i class="far fa-heart"></i>
-                            </a>
+                            <a class="nav-link" href="{% url 'users:login' %}"><i class="fas fa-sign-in-alt me-1"></i>Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link position-relative" href="{% url 'cart:cart_detail' %}" title="Shopping Cart">
-                                <i class="fas fa-shopping-cart"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:login' %}">
-                                <i class="fas fa-sign-in-alt"></i> Login
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:register' %}">
-                                <i class="fas fa-user-plus"></i> Register
-                            </a>
+                            <a class="nav-link" href="{% url 'users:register' %}"><i class="fas fa-user-plus me-1"></i>Register</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -267,38 +239,50 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white mt-5 py-4">
+    <footer>
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5>About FabVibe</h5>
-                    <p style="color: #ffffff;">Your one-stop destination for trendy fashion and clothing.</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="{% url 'products:home' %}" class="text-white">Home</a></li>
-                        <li><a href="#" class="text-white">About Us</a></li>
-                        <li><a href="#" class="text-white">Contact</a></li>
-                        <li><a href="#" class="text-white">Privacy Policy</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h5>Contact Us</h5>
-                    <p style="color: #ffffff;">
-                        <i class="fas fa-envelope"></i> support@fabvibe.com<br>
-                        <i class="fas fa-phone"></i> +1 234 567 8900
-                    </p>
-                    <div class="social-links">
-                        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-2x"></i></a>
-                        <a href="#" class="text-white me-3"><i class="fab fa-instagram fa-2x"></i></a>
-                        <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-2x"></i></a>
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 style="font-size:1.3rem;letter-spacing:.5px;">FabVibe</h5>
+                    <p>Your destination for premium fashion. Curated styles, AI try-on, and fast delivery — all in one place.</p>
+                    <div class="social-links mt-3">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="Pinterest"><i class="fab fa-pinterest-p"></i></a>
                     </div>
                 </div>
+                <div class="col-lg-2 col-md-6">
+                    <h5>Shop</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'products:home' %}">Home</a></li>
+                        <li><a href="{% url 'products:photo_tryon' %}">AI Try-On</a></li>
+                        {% if user.is_authenticated %}
+                        <li><a href="{% url 'products:wishlist' %}">Wishlist</a></li>
+                        <li><a href="{% url 'orders:order_history' %}">My Orders</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h5>Help</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Returns & Refunds</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h5>Contact</h5>
+                    <p><i class="fas fa-envelope me-2" style="color:var(--brand-light)"></i>support@fabvibe.com</p>
+                    <p><i class="fas fa-phone me-2" style="color:var(--brand-light)"></i>+91 98765 43210</p>
+                    <p><i class="fas fa-map-marker-alt me-2" style="color:var(--brand-light)"></i>Mumbai, India</p>
+                </div>
             </div>
-            <hr style="border-color: #ffffff; opacity: 1;">
+            <hr>
             <div class="text-center">
-                <p style="color: #ffffff;">&copy; 2024 FabVibe. All rights reserved.</p>
+                <p>&copy; 2025 FabVibe. All rights reserved. Made with <i class="fas fa-heart" style="color:#f87171;font-size:.75rem;"></i> for fashion lovers.</p>
             </div>
         </div>
     </footer>

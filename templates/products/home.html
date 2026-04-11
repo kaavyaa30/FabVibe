@@ -2,292 +2,410 @@
 {% load static %}
 {% load currency_filters %}
 
-{% block title %}FabVibe - Fashion E-commerce{% endblock %}
+{% block title %}FabVibe — Fashion E-commerce{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Full-Height Hero Banner */
-    .hero-banner {
-        position: relative;
-        height: calc(100vh - 76px); /* Full viewport height minus navbar */
-        min-height: 600px;
-        background: linear-gradient(135deg, #3d5a6b 0%, #3d5a6b 100%);
-        background-image: url('https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1920&h=1080&fit=crop');
-        background-size: cover;
-        background-position: center;
-        display: flex;
-        align-items: center;
-        margin-bottom: 4rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-    
-    .hero-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to right, rgba(74, 37, 69, 0.8) 0%, rgba(74, 37, 69, 0.5) 50%, rgba(74, 37, 69, 0.3) 100%);
-        z-index: 1;
-    }
-    
-    .hero-banner .container {
-        position: relative;
-        z-index: 2;
-        height: 100%;
-    }
-    
-    .hero-content {
-        max-width: 650px;
-        padding: 2rem 0;
-    }
-    
-    .hero-title {
-        font-size: 4.5rem;
-        font-weight: 700;
-        color: white;
-        line-height: 1.2;
-        margin-bottom: 2rem;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        letter-spacing: -1px;
-        animation: fadeInUp 0.8s ease;
-    }
-    
-    .hero-description {
-        font-size: 1.3rem;
-        color: rgba(255,255,255,0.95);
-        margin-bottom: 2.5rem;
-        line-height: 1.7;
-        animation: fadeInUp 1s ease;
-    }
-    
-    .hero-btn {
-        display: inline-block;
-        padding: 1.2rem 3rem;
-        background: #456273;
-        color: white;
-        font-weight: 600;
-        font-size: 1.1rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        border: none;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        box-shadow: 0 4px 15px rgba(74, 37, 69, 0.3);
-        animation: fadeInUp 1.2s ease;
-    }
-    
-    .hero-btn:hover {
-        background: #4e6a7a;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(74, 37, 69, 0.4);
-    }
-    
-    /* Scroll Indicator */
-    .scroll-indicator {
-        position: absolute;
-        bottom: 2rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 2;
-        animation: bounce 2s infinite;
-    }
-    
-    .scroll-indicator i {
-        color: white;
-        font-size: 2rem;
-        opacity: 0.8;
-    }
-    
-    /* Content Sections */
-    .featured-categories,
-    .new-arrivals {
-        padding: 4rem 0;
-    }
-    
-    /* Section Titles */
-    .section-title {
-        color: #2c3e50;
-        font-weight: 700;
-        font-size: 2.5rem;
-        position: relative;
-        padding-bottom: 1rem;
-        margin-bottom: 3rem;
-        text-align: center;
-    }
-    
-    .section-title::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80px;
-        height: 3px;
-        background: #456273;
-    }
-    
-    /* Animations */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% {
-            transform: translateX(-50%) translateY(0);
-        }
-        40% {
-            transform: translateX(-50%) translateY(-10px);
-        }
-        60% {
-            transform: translateX(-50%) translateY(-5px);
-        }
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .hero-banner {
-            height: calc(100vh - 76px);
-            min-height: 500px;
-        }
-        
-        .hero-title {
-            font-size: 2.5rem;
-        }
-        
-        .hero-description {
-            font-size: 1.1rem;
-        }
-        
-        .hero-btn {
-            padding: 1rem 2rem;
-            font-size: 1rem;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .hero-banner {
-            height: calc(100vh - 76px);
-            min-height: 450px;
-        }
-        
-        .hero-title {
-            font-size: 2rem;
-        }
-        
-        .hero-btn {
-            padding: 0.9rem 2rem;
-            font-size: 0.95rem;
-        }
-        
-        .section-title {
-            font-size: 2rem;
-        }
-    }
-    
-    /* Container */
-    .container {
-        max-width: 1320px;
-    }
+/* ── Hero ─────────────────────────────────────────────────── */
+.hero-section {
+  position: relative;
+  min-height: 580px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+}
+.hero-bg {
+  position: absolute; inset: 0;
+  background: url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=80') center/cover no-repeat;
+}
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg, rgba(15,25,35,.92) 0%, rgba(40,65,80,.75) 50%, rgba(15,25,35,.3) 100%);
+}
+.hero-inner {
+  position: relative; z-index: 2;
+  width: 100%; padding: 4rem 2.5rem;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.22);
+  backdrop-filter: blur(10px);
+  color: rgba(255,255,255,.92);
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: .38rem 1rem; border-radius: 50px;
+  margin-bottom: 1.5rem;
+}
+.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+.hero-title {
+  font-size: clamp(2.6rem, 5.5vw, 4.2rem);
+  font-weight: 800; color: #fff;
+  line-height: 1.1; letter-spacing: -.5px;
+  margin-bottom: 1.25rem;
+}
+.hero-title .accent { color: #7ecfe0; }
+
+.hero-desc {
+  font-size: 1.05rem; color: rgba(255,255,255,.78);
+  line-height: 1.75; max-width: 460px; margin-bottom: 2.25rem;
+}
+.hero-cta { display: flex; gap: .85rem; flex-wrap: wrap; margin-bottom: 3rem; }
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .9rem 2.1rem; background: #fff; color: var(--brand);
+  font-weight: 700; font-size: .95rem; border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0,0,0,.25); transition: var(--transition);
+  text-decoration: none;
+}
+.btn-hero-primary:hover { background: var(--brand-pale); color: var(--brand-dark); transform: translateY(-2px); }
+.btn-hero-outline {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .9rem 2.1rem; background: transparent; color: #fff;
+  font-weight: 600; font-size: .95rem;
+  border: 1.5px solid rgba(255,255,255,.45); border-radius: var(--radius);
+  transition: var(--transition); text-decoration: none;
+}
+.btn-hero-outline:hover { background: rgba(255,255,255,.12); color: #fff; transform: translateY(-2px); }
+
+.hero-stats { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.hero-stat-num { font-size: 1.75rem; font-weight: 800; color: #fff; line-height: 1; }
+.hero-stat-lbl { font-size: .7rem; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .08em; margin-top: .2rem; }
+
+/* ── Trust bar ────────────────────────────────────────────── */
+.trust-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  margin-bottom: 4rem;
+}
+.trust-item {
+  display: flex; align-items: center; gap: .9rem;
+  padding: 1.4rem 1.5rem;
+  border-right: 1px solid var(--border);
+  transition: background .2s;
+}
+.trust-item:last-child { border-right: none; }
+.trust-item:hover { background: var(--brand-pale); }
+.trust-icon {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: var(--brand-pale); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem; color: var(--brand);
+  transition: var(--transition);
+}
+.trust-item:hover .trust-icon { background: var(--brand); color: #fff; }
+.trust-label { font-size: .82rem; font-weight: 700; color: var(--text-dark); }
+.trust-sub   { font-size: .72rem; color: var(--text-light); margin-top: .1rem; }
+
+/* ── Section header ───────────────────────────────────────── */
+.sec-eyebrow {
+  display: block; text-align: center;
+  font-size: .7rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--brand); margin-bottom: .4rem;
+}
+.sec-title {
+  font-size: 2rem; font-weight: 800; color: var(--text-dark);
+  text-align: center; margin-bottom: 2.5rem;
+  position: relative; padding-bottom: .85rem;
+}
+.sec-title::after {
+  content: ''; position: absolute; bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 48px; height: 3px; background: var(--brand); border-radius: 2px;
+}
+
+/* ── Category cards ───────────────────────────────────────── */
+.cat-card {
+  position: relative; overflow: hidden;
+  border-radius: var(--radius-lg);
+  display: block; text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: transform .28s ease, box-shadow .28s ease;
+}
+.cat-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+.cat-card img {
+  width: 100%; height: 280px; object-fit: cover; display: block;
+  transition: transform .45s ease;
+}
+.cat-card:hover img { transform: scale(1.06); }
+.cat-card-body {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(15,25,35,.9) 0%, rgba(15,25,35,.35) 100%);
+  padding: 1.75rem 1.25rem 1.25rem;
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+.cat-card-name {
+  font-size: 1.2rem; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,.4);
+}
+.cat-card-arrow {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .85rem;
+  transition: background .2s, transform .2s;
+}
+.cat-card:hover .cat-card-arrow { background: var(--brand); transform: translateX(3px); }
+
+/* ── AI Try-On banner ─────────────────────────────────────── */
+.tryon-banner {
+  background: #344d5a;
+  background-image: linear-gradient(135deg, #456273 0%, #2c4050 100%);
+  border-radius: var(--radius-xl);
+  padding: 3.5rem 3rem;
+  margin: 4rem 0;
+  box-shadow: var(--shadow-lg);
+}
+.tryon-banner h2 { font-size: 2rem; font-weight: 800; color: #fff !important; margin-bottom: .75rem; }
+.tryon-banner p  { color: rgba(255,255,255,.8) !important; font-size: 1rem; max-width: 480px; margin-bottom: 1.75rem; }
+.tryon-steps {
+  display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 2rem;
+}
+.tryon-step {
+  display: flex; align-items: center; gap: .6rem;
+  color: rgba(255,255,255,.88); font-size: .85rem; font-weight: 600;
+}
+.tryon-step-num {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,.2); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 800; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,.3);
+}
+.btn-tryon-cta {
+  display: inline-flex; align-items: center; gap: .6rem;
+  padding: .9rem 2.2rem; background: #fff; color: #344d5a;
+  font-weight: 700; font-size: .95rem; border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,.2); transition: var(--transition);
+  text-decoration: none;
+}
+.btn-tryon-cta:hover { background: #eef3f6; color: #2c4050; transform: translateY(-2px); }
+
+/* ── Product cards ────────────────────────────────────────── */
+.product-card .card-img-top { height: 280px; }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 991px) {
+  .trust-bar { grid-template-columns: repeat(2, 1fr); }
+  .trust-item:nth-child(2) { border-right: none; }
+  .trust-item:nth-child(3) { border-top: 1px solid var(--border); }
+  .trust-item:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+}
+@media (max-width: 767px) {
+  .hero-inner { padding: 2.5rem 1.5rem; }
+  .hero-title { font-size: 2.1rem; }
+  .hero-stats { gap: 1.5rem; }
+  .trust-bar { grid-template-columns: 1fr 1fr; }
+  .tryon-banner { padding: 2.5rem 1.75rem; }
+  .tryon-banner h2 { font-size: 1.6rem; }
+  .cat-card img { height: 220px; }
+}
+@media (max-width: 575px) {
+  .trust-bar { grid-template-columns: 1fr; }
+  .trust-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .trust-item:last-child { border-bottom: none; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Static Hero Banner Section -->
-<section class="hero-banner">
-    <div class="hero-overlay"></div>
-    <div class="container h-100">
-        <div class="row h-100 align-items-center">
-            <div class="col-lg-6">
-                <div class="hero-content">
-                    <h1 class="hero-title">FabVibe Shopping</h1>
-                    <p class="hero-description">Discover the latest trends in fashion. Elevate your style with our curated collection of premium clothing and accessories.</p>
-                    <a href="{% url 'products:home' %}#categories" class="hero-btn">Explore Collection</a>
-                </div>
-            </div>
+
+<!-- ══════════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════════ -->
+<section class="hero-section">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-inner">
+    <div class="row align-items-center">
+      <div class="col-lg-7 col-xl-6">
+
+        <div class="hero-badge">
+          <span class="dot"></span>
+          New Season 2025 — Now Live
         </div>
+
+        <h1 class="hero-title">
+          Dress the Way<br>You <span class="accent">Feel</span>
+        </h1>
+
+        <p class="hero-desc">
+          Curated fashion with AI-powered virtual try-on. See every outfit on you before you buy — no guesswork, just style.
+        </p>
+
+        <div class="hero-cta">
+          <a href="#categories" class="btn-hero-primary">
+            <i class="fas fa-th-large"></i> Shop Collection
+          </a>
+          <a href="#tryon-section" class="btn-hero-outline">
+            <i class="fas fa-tshirt"></i> Try On Now
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-num">80+</div>
+            <div class="hero-stat-lbl">Products</div>
+          </div>
+          <div>
+            <div class="hero-stat-num">6</div>
+            <div class="hero-stat-lbl">Categories</div>
+          </div>
+          <div>
+            <div class="hero-stat-num">AI</div>
+            <div class="hero-stat-lbl">Try-On</div>
+          </div>
+          <div>
+            <div class="hero-stat-num">Free</div>
+            <div class="hero-stat-lbl">Shipping ₹999+</div>
+          </div>
+        </div>
+
+      </div>
     </div>
+  </div>
 </section>
 
-<!-- Featured Categories Section -->
+<!-- ══════════════════════════════════════════════════════════
+     TRUST BAR
+══════════════════════════════════════════════════════════ -->
+<div class="trust-bar mb-5">
+  <div class="trust-item">
+    <div class="trust-icon"><i class="fas fa-shipping-fast"></i></div>
+    <div>
+      <div class="trust-label">Free Shipping</div>
+      <div class="trust-sub">On orders over ₹999</div>
+    </div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-icon"><i class="fas fa-undo-alt"></i></div>
+    <div>
+      <div class="trust-label">Easy Returns</div>
+      <div class="trust-sub">7-day return policy</div>
+    </div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-icon"><i class="fas fa-lock"></i></div>
+    <div>
+      <div class="trust-label">Secure Payment</div>
+      <div class="trust-sub">Razorpay &amp; Stripe</div>
+    </div>
+  </div>
+  <div class="trust-item">
+    <div class="trust-icon"><i class="fas fa-magic"></i></div>
+    <div>
+      <div class="trust-label">AI Try-On</div>
+      <div class="trust-sub">See before you buy</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     CATEGORIES
+══════════════════════════════════════════════════════════ -->
 {% if featured_categories %}
-<section class="featured-categories section-spacing" id="categories">
-    <div class="container">
-        <h2 class="section-title text-center mb-5">Shop by Category</h2>
-        <div class="row g-4 mt-4">
-            {% for category in featured_categories %}
-            <div class="col-lg-4 col-md-6">
-                <a href="{% url 'products:category_products' category.slug %}" class="category-card card text-decoration-none">
-                    {% if category.image %}
-                    <img src="{{ category.image.url }}" class="card-img-top" alt="{{ category.name }}">
-                    {% else %}
-                    <img src="https://via.placeholder.com/400x280?text={{ category.name }}" class="card-img-top" alt="{{ category.name }}">
-                    {% endif %}
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ category.name }}</h5>
-                    </div>
-                </a>
-            </div>
-            {% endfor %}
+<section id="categories" class="mb-5">
+  <span class="sec-eyebrow">Browse</span>
+  <h2 class="sec-title">Shop by Category</h2>
+
+  <div class="row g-4">
+    {% for category in featured_categories %}
+    <div class="col-lg-3 col-md-6">
+      <a href="{% url 'products:category_products' category.slug %}" class="cat-card">
+        {% if category.image %}
+          <img src="{{ category.image.url }}" alt="{{ category.name }}">
+        {% else %}
+          <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80" alt="{{ category.name }}">
+        {% endif %}
+        <div class="cat-card-body">
+          <span class="cat-card-name">{{ category.name }}</span>
+          <span class="cat-card-arrow"><i class="fas fa-arrow-right"></i></span>
         </div>
+      </a>
     </div>
+    {% endfor %}
+  </div>
 </section>
 {% endif %}
 
-<!-- New Arrivals Section -->
+<!-- ══════════════════════════════════════════════════════════
+     AI TRY-ON BANNER
+══════════════════════════════════════════════════════════ -->
+<div id="tryon-section" class="tryon-banner">
+  <div class="row align-items-center">
+    <div class="col-lg-8">
+      <h2><i class="fas fa-magic me-2"></i>Virtual Try-On — Powered by AI</h2>
+      <p>Upload your photo and see any outfit on you instantly. No fitting room needed.</p>
+      <div class="tryon-steps">
+        <div class="tryon-step"><span class="tryon-step-num">1</span> Upload your photo</div>
+        <div class="tryon-step"><span class="tryon-step-num">2</span> Pick any garment</div>
+        <div class="tryon-step"><span class="tryon-step-num">3</span> See it on you</div>
+      </div>
+      <a href="{% url 'products:photo_tryon' %}" class="btn-tryon-cta">
+        <i class="fas fa-tshirt"></i> Try On Now — It's Free
+      </a>
+    </div>
+    <div class="col-lg-4 d-none d-lg-flex justify-content-end align-items-center">
+      <div style="text-align:center;opacity:.25;">
+        <i class="fas fa-tshirt" style="font-size:8rem;color:#fff;display:block;"></i>
+        <i class="fas fa-magic" style="font-size:3rem;color:#fff;margin-top:1rem;display:block;"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     NEW ARRIVALS
+══════════════════════════════════════════════════════════ -->
 {% if new_arrivals %}
-<section class="new-arrivals section-spacing">
-    <div class="container">
-        <h2 class="section-title text-center mb-5">New Arrivals</h2>
-        <div class="row g-4 mt-4">
-            {% for product in new_arrivals %}
-            <div class="col-lg-3 col-md-4 col-sm-6">
-                <div class="card product-card h-100">
-                    <div class="position-relative">
-                        <a href="{% url 'products:product_detail' product.slug %}">
-                            {% if product.images.all %}
-                                <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
-                            {% else %}
-                                <img src="https://via.placeholder.com/320x320?text=No+Image" class="card-img-top" alt="{{ product.name }}">
-                            {% endif %}
-                        </a>
-                        <button class="wishlist-btn-card" onclick="toggleWishlist({{ product.id }}, this)" title="Add to wishlist">
-                            <i class="{% if product.id in user_wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
-                        </button>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <h6 class="card-title flex-grow-1">
-                            <a href="{% url 'products:product_detail' product.slug %}" class="text-decoration-none">
-                                {{ product.name }}
-                            </a>
-                        </h6>
-                        <p class="product-price mb-2">{{ product.price|inr }}</p>
-                        <div class="mt-auto">
-                            {% if product.is_in_stock %}
-                                <span class="badge bg-success">In Stock</span>
-                            {% else %}
-                                <span class="badge bg-danger">Out of Stock</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
+<section class="mb-5">
+  <span class="sec-eyebrow">Just In</span>
+  <h2 class="sec-title">New Arrivals</h2>
+
+  <div class="row g-4">
+    {% for product in new_arrivals %}
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <div class="card product-card h-100">
+        <div class="position-relative overflow-hidden">
+          <a href="{% url 'products:product_detail' product.slug %}">
+            {% if product.images.all %}
+              <img src="{{ product.images.first.image.url }}" class="card-img-top" alt="{{ product.name }}">
+            {% else %}
+              <img src="https://via.placeholder.com/320x280?text=No+Image" class="card-img-top" alt="{{ product.name }}">
+            {% endif %}
+          </a>
+          <button class="wishlist-btn-card" onclick="toggleWishlist({{ product.id }}, this)" title="Add to wishlist">
+            <i class="{% if product.id in user_wishlist_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+          </button>
         </div>
+        <div class="card-body d-flex flex-column">
+          <h6 class="card-title flex-grow-1">
+            <a href="{% url 'products:product_detail' product.slug %}">{{ product.name }}</a>
+          </h6>
+          <p class="product-price mb-2">{{ product.price|inr }}</p>
+          <div class="mt-auto">
+            {% if product.is_in_stock %}
+              <span class="badge bg-success">In Stock</span>
+            {% else %}
+              <span class="badge bg-danger">Out of Stock</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </section>
 {% endif %}
-{% endblock %}
 
-{% block extra_js %}
-<!-- No carousel JavaScript needed -->
 {% endblock %}

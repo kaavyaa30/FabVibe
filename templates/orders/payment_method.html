@@ -1,300 +1,350 @@
 {% extends 'base.html' %}
 
-{% block title %}Payment Method - FabVibe{% endblock %}
+{% block title %}Payment Method — FabVibe{% endblock %}
 
-{% block content %}
-<div class="container my-5">
-    <h2 class="mb-4">Select Payment Method</h2>
-
-    <!-- Checkout Progress -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="mt-2 text-muted">Shipping Address</div>
-                </div>
-                <div class="flex-fill" style="height:2px;background-color:#28a745;"></div>
-                <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="mt-2 text-muted">Order Summary</div>
-                </div>
-                <div class="flex-fill" style="height:2px;background-color:#28a745;"></div>
-                <div class="text-center flex-fill">
-                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                        <strong>3</strong>
-                    </div>
-                    <div class="mt-2"><strong>Payment</strong></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Payment Method Selection -->
-        <div class="col-md-8">
-            {% if inventory_errors %}
-            <div class="alert alert-danger mb-4">
-                <strong>Some items in your cart are out of stock:</strong>
-                <ul class="mb-0 mt-2">
-                    {% for err in inventory_errors %}<li>{{ err }}</li>{% endfor %}
-                </ul>
-                <div class="mt-2">
-                    <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger">Go to Cart &amp; Fix</a>
-                </div>
-            </div>
-            {% endif %}
-
-            <form method="post" id="paymentForm" action="{% url 'orders:payment_method_selection' %}">
-                {% csrf_token %}
-                <input type="hidden" name="payment_method" id="selectedMethod" value="cod">
-
-                <div class="card mb-4" style="border:1px solid #dee2e6;border-radius:8px;overflow:hidden;">
-                    <div class="d-flex" style="min-height:340px;">
-
-                        <!-- Left Tab List -->
-                        <div class="pm-tabs" style="width:200px;min-width:200px;border-right:1px solid #dee2e6;background:#fafafa;">
-                            <div class="pm-tab active" data-target="cod" onclick="switchTab('cod')">
-                                <i class="fas fa-money-bill-wave me-2"></i>Cash on Delivery
-                            </div>
-                            <div class="pm-tab" data-target="upi" onclick="switchTab('upi')">
-                                <i class="fas fa-mobile-alt me-2"></i>UPI
-                            </div>
-                            <div class="pm-tab" data-target="card" onclick="switchTab('card')">
-                                <i class="fas fa-credit-card me-2"></i>Credit / Debit Card
-                            </div>
-                        </div>
-
-                        <!-- Right Content Panels -->
-                        <div class="flex-fill p-4">
-
-                            <!-- COD Panel -->
-                            <div class="pm-panel" id="panel-cod">
-                                <h6 class="fw-bold mb-3"><i class="fas fa-money-bill-wave text-success me-2"></i>Cash on Delivery</h6>
-                                <div class="alert alert-success border-0" style="background:#e8f5e9;border-radius:8px;">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Pay with cash when your order arrives at your doorstep. No advance payment needed.
-                                </div>
-                                <ul class="text-muted small mt-3 ps-3">
-                                    <li>Keep exact change ready if possible</li>
-                                    <li>Our delivery agent will collect payment on delivery</li>
-                                    <li>You can verify your order before paying</li>
-                                </ul>
-                            </div>
-
-                            <!-- UPI Panel -->
-                            <div class="pm-panel d-none" id="panel-upi">
-                                <h6 class="fw-bold mb-3"><i class="fas fa-mobile-alt text-primary me-2"></i>UPI Payment</h6>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Enter UPI ID</label>
-                                    <input type="text" class="form-control" id="upiId" placeholder="e.g. name@upi" autocomplete="off">
-                                    <div class="form-text">Supported: Google Pay, PhonePe, Paytm, BHIM &amp; more</div>
-                                </div>
-                                <div class="text-center mt-3">
-                                    <div style="width:120px;height:120px;border:2px dashed #ccc;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:#aaa;font-size:12px;">
-                                        <div><i class="fas fa-qrcode fa-2x mb-1 d-block"></i>QR Code</div>
-                                    </div>
-                                    <div class="text-muted small mt-2">Scan with any UPI app</div>
-                                </div>
-                            </div>
-
-                            <!-- Card Panel -->
-                            <div class="pm-panel d-none" id="panel-card">
-                                <h6 class="fw-bold mb-3"><i class="fas fa-credit-card text-info me-2"></i>Credit / Debit Card</h6>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold">Card Number</label>
-                                    <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="off">
-                                </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-6">
-                                        <label class="form-label small fw-semibold">Expiry Date</label>
-                                        <input type="text" class="form-control" id="cardExpiry" placeholder="MM / YY" maxlength="7">
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label small fw-semibold">CVV</label>
-                                        <input type="password" class="form-control" id="cardCvv" placeholder="•••" maxlength="4">
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2 mt-2">
-                                    <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" style="height:24px;">
-                                    <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" style="height:24px;">
-                                    <img src="https://img.icons8.com/color/48/000000/rupay.png" alt="RuPay" style="height:24px;">
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Wallet Split Payment -->
-                {% if wallet_balance and wallet_balance > 0 %}
-                <div class="alert alert-success border-0 p-3 mb-3" style="background:#e8f5e9;border-radius:10px;">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-semibold"><i class="fas fa-wallet me-2" style="color:#456273;"></i>Reward Wallet</span>
-                        <span class="fw-bold" style="color:#456273;">₹{{ wallet_balance }} available</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <input type="checkbox" id="useWallet" class="form-check-input m-0">
-                        <label for="useWallet" class="small mb-0">Apply wallet balance to reduce bill</label>
-                    </div>
-                    <div id="walletApplyInfo" class="small text-success mt-1" style="display:none;"></div>
-                    <input type="hidden" name="wallet_deduction" id="walletDeductionInput" value="0">
-                </div>
-                {% endif %}
-
-                <button type="submit" class="btn btn-lg w-100 text-white" style="background:#456273;">
-                    Continue to Payment <i class="fas fa-arrow-right ms-1"></i>
-                </button>
-            </form>
-
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-shield-alt me-2"></i>
-                <strong>Safe and Secure Payments.</strong> 100% Payment Protection. Easy Returns.
-            </div>
-        </div>
-
-        <!-- Order Summary Sidebar (unchanged) -->
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header" style="color:#fff;">
-                    <h5 class="mb-0">Order Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="text-muted mb-2">Delivering to:</h6>
-                        <strong>{{ address.full_name }}</strong>
-                        <div class="text-muted small mt-1">
-                            {{ address.address_line1 }}, {{ address.city }}, {{ address.state }} {{ address.postal_code }}
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal ({{ cart_items.count }} items)</span>
-                        <span>₹{{ subtotal }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Tax (18%)</span>
-                        <span>₹{{ tax|floatformat:2 }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Shipping Charges</span>
-                        {% if shipping_charge == 0 %}
-                            <span class="text-success">FREE</span>
-                        {% else %}
-                            <span>₹{{ shipping_charge }}</span>
-                        {% endif %}
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-3">
-                        <strong>Total Amount</strong>
-                        <strong class="text-primary">₹{{ total|floatformat:2 }}</strong>
-                    </div>
-                    <a href="{% url 'orders:order_summary' %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-arrow-left"></i> Back to Summary
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
 .pm-tab {
-    padding: 16px 18px;
-    cursor: pointer;
-    font-size: 14px;
-    color: #555;
-    border-left: 3px solid transparent;
-    transition: all 0.2s;
-    user-select: none;
+  padding: 14px 18px;
+  cursor: pointer;
+  font-size: .875rem;
+  color: var(--text-mid);
+  border-left: 3px solid transparent;
+  transition: var(--transition);
+  user-select: none;
 }
-.pm-tab:hover {
-    background: #f0f0f0;
-    color: #333;
-}
-.pm-tab.active {
-    border-left: 3px solid #456273;
-    background: #fff;
-    color: #456273;
-    font-weight: 600;
-}
+.pm-tab:hover { background: var(--brand-pale); color: var(--brand); }
+.pm-tab.active { border-left-color: var(--brand); background: var(--white); color: var(--brand); font-weight: 700; }
 </style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header mb-4">
+  <h1><i class="fas fa-credit-card me-2"></i>Select Payment Method</h1>
+  <p class="lead">Choose how you'd like to pay</p>
+</div>
+
+<!-- Checkout Progress -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-center flex-fill">
+        <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white mb-1"
+             style="width:38px;height:38px;background:var(--success);">
+          <i class="fas fa-check"></i>
+        </div>
+        <div class="small text-muted">Shipping</div>
+      </div>
+      <div class="flex-fill" style="height:2px;background:var(--success);"></div>
+      <div class="text-center flex-fill">
+        <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white mb-1"
+             style="width:38px;height:38px;background:var(--success);">
+          <i class="fas fa-check"></i>
+        </div>
+        <div class="small text-muted">Summary</div>
+      </div>
+      <div class="flex-fill" style="height:2px;background:var(--success);"></div>
+      <div class="text-center flex-fill">
+        <div class="rounded-circle d-inline-flex align-items-center justify-content-center text-white mb-1"
+             style="width:38px;height:38px;background:var(--brand);">
+          <strong>3</strong>
+        </div>
+        <div class="small fw-600">Payment</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left: payment selection -->
+  <div class="col-md-8">
+
+    {% if inventory_errors %}
+    <div class="alert alert-danger mb-4">
+      <strong>Some items in your cart are out of stock:</strong>
+      <ul class="mb-0 mt-2">{% for err in inventory_errors %}<li>{{ err }}</li>{% endfor %}</ul>
+      <div class="mt-2">
+        <a href="{% url 'cart:cart_detail' %}" class="btn btn-sm btn-outline-danger">Go to Cart &amp; Fix</a>
+      </div>
+    </div>
+    {% endif %}
+
+    <form method="post" id="paymentForm" action="{% url 'orders:payment_method_selection' %}">
+      {% csrf_token %}
+      <input type="hidden" name="payment_method" id="selectedMethod" value="cod">
+
+      <div class="detail-card mb-3">
+        <div class="d-flex" style="min-height:320px;">
+          <!-- Tab list -->
+          <div style="width:190px;min-width:190px;border-right:1px solid var(--border);background:var(--bg);">
+            <div class="pm-tab active" data-target="cod" onclick="switchTab('cod')">
+              <i class="fas fa-money-bill-wave me-2"></i>Cash on Delivery
+            </div>
+            <div class="pm-tab" data-target="upi" onclick="switchTab('upi')">
+              <i class="fas fa-mobile-alt me-2"></i>UPI
+            </div>
+            <div class="pm-tab" data-target="card" onclick="switchTab('card')">
+              <i class="fas fa-credit-card me-2"></i>Card
+            </div>
+          </div>
+
+          <!-- Panels -->
+          <div class="flex-fill p-4">
+
+            <div class="pm-panel" id="panel-cod">
+              <h6 class="fw-700 mb-3"><i class="fas fa-money-bill-wave me-2" style="color:var(--success);"></i>Cash on Delivery</h6>
+              <div class="alert alert-success">
+                <i class="fas fa-info-circle me-2"></i>Pay with cash when your order arrives. No advance payment needed.
+              </div>
+              <ul class="text-muted small mt-3 ps-3">
+                <li>Keep exact change ready if possible</li>
+                <li>Our delivery agent will collect payment on delivery</li>
+                <li>You can verify your order before paying</li>
+              </ul>
+            </div>
+
+            <div class="pm-panel d-none" id="panel-upi">
+              <h6 class="fw-700 mb-3"><i class="fas fa-mobile-alt me-2" style="color:var(--brand);"></i>UPI Payment</h6>
+              <div class="mb-3">
+                <label class="form-label small fw-600">Enter UPI ID</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="upiId"
+                         placeholder="e.g. name@okaxis" autocomplete="off"
+                         oninput="onUpiInput(this.value)">
+                  <span class="input-group-text" id="upiValidIcon" style="display:none;"></span>
+                </div>
+                <div class="form-text">Supported: Google Pay, PhonePe, Paytm, BHIM &amp; more</div>
+              </div>
+
+              <!-- QR area -->
+              <div id="upiQrWrap" class="text-center mt-3" style="display:none;">
+                <div style="display:inline-block;padding:10px;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);">
+                  <div id="upiQrCanvas"></div>
+                </div>
+                <div class="mt-2">
+                  <span class="badge bg-brand px-3 py-2" style="font-size:.78rem;">
+                    <i class="fas fa-rupee-sign me-1"></i>₹<span id="upiAmountLabel"></span>
+                  </span>
+                </div>
+                <div class="text-muted small mt-1">Scan with any UPI app to pay</div>
+              </div>
+
+              <!-- Placeholder shown before UPI ID is typed -->
+              <div id="upiQrPlaceholder" class="text-center mt-3">
+                <div style="width:130px;height:130px;border:2px dashed var(--border);border-radius:var(--radius);display:inline-flex;align-items:center;justify-content:center;color:var(--text-light);font-size:.75rem;flex-direction:column;gap:6px;">
+                  <i class="fas fa-qrcode fa-2x"></i>
+                  <span>Enter UPI ID<br>to generate QR</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pm-panel d-none" id="panel-card">
+              <h6 class="fw-700 mb-3"><i class="fas fa-credit-card me-2" style="color:var(--brand-light);"></i>Credit / Debit Card</h6>
+              <div class="mb-3">
+                <label class="form-label small fw-600">Card Number</label>
+                <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" autocomplete="off">
+              </div>
+              <div class="row g-3 mb-3">
+                <div class="col-6">
+                  <label class="form-label small fw-600">Expiry</label>
+                  <input type="text" class="form-control" id="cardExpiry" placeholder="MM / YY" maxlength="7">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small fw-600">CVV</label>
+                  <input type="password" class="form-control" id="cardCvv" placeholder="•••" maxlength="4">
+                </div>
+              </div>
+              <div class="d-flex gap-2">
+                <img src="https://img.icons8.com/color/48/000000/visa.png" alt="Visa" style="height:22px;">
+                <img src="https://img.icons8.com/color/48/000000/mastercard.png" alt="Mastercard" style="height:22px;">
+                <img src="https://img.icons8.com/color/48/000000/rupay.png" alt="RuPay" style="height:22px;">
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallet -->
+      {% if wallet_balance and wallet_balance > 0 %}
+      <div class="alert alert-success mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-600"><i class="fas fa-wallet me-2"></i>Reward Wallet</span>
+          <span class="fw-700" style="color:var(--brand);">₹{{ wallet_balance }} available</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <input type="checkbox" id="useWallet" class="form-check-input m-0">
+          <label for="useWallet" class="small mb-0">Apply wallet balance to reduce bill</label>
+        </div>
+        <div id="walletApplyInfo" class="small text-success mt-1" style="display:none;"></div>
+        <input type="hidden" name="wallet_deduction" id="walletDeductionInput" value="0">
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary btn-lg w-100">
+        Continue to Payment <i class="fas fa-arrow-right ms-1"></i>
+      </button>
+    </form>
+
+    <div class="alert alert-info mt-3">
+      <i class="fas fa-shield-alt me-2"></i>
+      <strong>Safe &amp; Secure Payments.</strong> 100% Payment Protection. Easy Returns.
+    </div>
+  </div>
+
+  <!-- Right: order summary -->
+  <div class="col-md-4">
+    <div class="detail-card cart-summary-card">
+      <div class="card-header"><i class="fas fa-receipt me-2"></i>Order Summary</div>
+      <div class="card-body">
+        <p class="text-muted small mb-1">Delivering to:</p>
+        <p class="fw-600 mb-1">{{ address.full_name }}</p>
+        <p class="text-muted small mb-3">{{ address.address_line1 }}, {{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+        <hr>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Subtotal ({{ cart_items.count }} items)</span>
+          <span>₹{{ subtotal }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Tax (18%)</span>
+          <span>₹{{ tax|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted">Shipping</span>
+          {% if shipping_charge == 0 %}
+            <span class="text-success fw-600">FREE</span>
+          {% else %}
+            <span>₹{{ shipping_charge }}</span>
+          {% endif %}
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between mb-3">
+          <strong>Total</strong>
+          <strong style="color:var(--brand);font-size:1.1rem;">₹{{ total|floatformat:2 }}</strong>
+        </div>
+        <a href="{% url 'orders:order_summary' %}" class="btn btn-outline-secondary w-100">
+          <i class="fas fa-arrow-left me-1"></i>Back to Summary
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QRCode.js — lightweight, no dependencies, no API key -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <script>
+// ── UPI QR generation ────────────────────────────────────────
+const UPI_VPA  = 'fabvibe@okaxis';          // FabVibe merchant UPI ID
+const UPI_NAME = 'FabVibe';
+const ORDER_AMOUNT = '{{ total|floatformat:2 }}';
+
+let qrInstance = null;
+let upiDebounce = null;
+
+function onUpiInput(val) {
+  clearTimeout(upiDebounce);
+  upiDebounce = setTimeout(() => generateUpiQr(val.trim()), 400);
+}
+
+function generateUpiQr(upiId) {
+  const wrap        = document.getElementById('upiQrWrap');
+  const placeholder = document.getElementById('upiQrPlaceholder');
+  const canvas      = document.getElementById('upiQrCanvas');
+  const amountLabel = document.getElementById('upiAmountLabel');
+  const iconEl      = document.getElementById('upiValidIcon');
+
+  // Basic UPI ID format check: something@something
+  const valid = /^[a-zA-Z0-9.\-_+]+@[a-zA-Z0-9]+$/.test(upiId);
+
+  if (!valid || upiId.length < 5) {
+    wrap.style.display        = 'none';
+    placeholder.style.display = 'block';
+    iconEl.style.display      = 'none';
+    return;
+  }
+
+  // Build UPI deep-link URI (standard across all UPI apps)
+  const upiUri = `upi://pay?pa=${encodeURIComponent(UPI_VPA)}&pn=${encodeURIComponent(UPI_NAME)}&am=${ORDER_AMOUNT}&cu=INR&tn=${encodeURIComponent('FabVibe Order')}`;
+
+  // Clear previous QR
+  canvas.innerHTML = '';
+  qrInstance = new QRCode(canvas, {
+    text:         upiUri,
+    width:        160,
+    height:       160,
+    colorDark:    '#1a2530',
+    colorLight:   '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+
+  amountLabel.textContent = ORDER_AMOUNT;
+  placeholder.style.display = 'none';
+  wrap.style.display        = 'block';
+
+  // Show green tick on input
+  iconEl.innerHTML     = '<i class="fas fa-check-circle text-success"></i>';
+  iconEl.style.display = 'flex';
+}
+
+// ── Tab switching ────────────────────────────────────────────
 function switchTab(method) {
-    // Update hidden input
-    document.getElementById('selectedMethod').value = method;
-
-    // Update tab styles
-    document.querySelectorAll('.pm-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.target === method);
-    });
-
-    // Show/hide panels
-    document.querySelectorAll('.pm-panel').forEach(p => {
-        p.classList.toggle('d-none', p.id !== 'panel-' + method);
-    });
+  document.getElementById('selectedMethod').value = method;
+  document.querySelectorAll('.pm-tab').forEach(t => t.classList.toggle('active', t.dataset.target === method));
+  document.querySelectorAll('.pm-panel').forEach(p => p.classList.toggle('d-none', p.id !== 'panel-' + method));
 }
 
-// Card number formatting
+// ── Card formatting ──────────────────────────────────────────
 const cardInput = document.getElementById('cardNumber');
-if (cardInput) {
-    cardInput.addEventListener('input', function () {
-        let v = this.value.replace(/\D/g, '').substring(0, 16);
-        this.value = v.replace(/(.{4})/g, '$1 ').trim();
-    });
-}
+if (cardInput) cardInput.addEventListener('input', function() {
+  let v = this.value.replace(/\D/g,'').substring(0,16);
+  this.value = v.replace(/(.{4})/g,'$1 ').trim();
+});
 
-// Expiry formatting
 const expiryInput = document.getElementById('cardExpiry');
-if (expiryInput) {
-    expiryInput.addEventListener('input', function () {
-        let v = this.value.replace(/\D/g, '').substring(0, 4);
-        if (v.length >= 3) v = v.substring(0, 2) + ' / ' + v.substring(2);
-        this.value = v;
-    });
-}
+if (expiryInput) expiryInput.addEventListener('input', function() {
+  let v = this.value.replace(/\D/g,'').substring(0,4);
+  if (v.length >= 3) v = v.substring(0,2) + ' / ' + v.substring(2);
+  this.value = v;
+});
 
-// Wallet toggle
+// ── Wallet toggle ────────────────────────────────────────────
 const useWalletCb = document.getElementById('useWallet');
 if (useWalletCb) {
-    const orderTotal = parseFloat("{{ total|floatformat:2 }}");
-    const walletBal  = parseFloat("{{ wallet_balance|default:0|floatformat:2 }}");
-    const infoEl     = document.getElementById('walletApplyInfo');
-    const inputEl    = document.getElementById('walletDeductionInput');
-
-    useWalletCb.addEventListener('change', function () {
-        if (this.checked) {
-            const deduct    = Math.min(walletBal, orderTotal);
-            const remaining = Math.max(0, orderTotal - deduct).toFixed(2);
-            inputEl.value   = deduct.toFixed(2);
-            infoEl.textContent = `₹${deduct.toFixed(2)} deducted from wallet. You pay: ₹${remaining}`;
-            infoEl.style.display = 'block';
-        } else {
-            inputEl.value = '0';
-            infoEl.style.display = 'none';
-        }
-    });
+  const orderTotal = parseFloat("{{ total|floatformat:2 }}");
+  const walletBal  = parseFloat("{{ wallet_balance|default:0|floatformat:2 }}");
+  const infoEl     = document.getElementById('walletApplyInfo');
+  const inputEl    = document.getElementById('walletDeductionInput');
+  useWalletCb.addEventListener('change', function() {
+    if (this.checked) {
+      const deduct = Math.min(walletBal, orderTotal);
+      const remaining = Math.max(0, orderTotal - deduct).toFixed(2);
+      inputEl.value = deduct.toFixed(2);
+      infoEl.textContent = `₹${deduct.toFixed(2)} deducted. You pay: ₹${remaining}`;
+      infoEl.style.display = 'block';
+    } else {
+      inputEl.value = '0';
+      infoEl.style.display = 'none';
+    }
+  });
 }
 
-// Prevent double-submit
-document.getElementById('paymentForm').addEventListener('submit', function (e) {
-    const deductInput = document.getElementById('walletDeductionInput');
-    if (deductInput && parseFloat(deductInput.value) > 0) {
-        fetch('/wallet/apply/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
-            body: JSON.stringify({ amount: deductInput.value, order_total: "{{ total|floatformat:2 }}" }),
-            keepalive: true,
-        });
-    }
-    const btn = this.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+// ── Form submit ──────────────────────────────────────────────
+document.getElementById('paymentForm').addEventListener('submit', function(e) {
+  const deductInput = document.getElementById('walletDeductionInput');
+  if (deductInput && parseFloat(deductInput.value) > 0) {
+    fetch('/wallet/apply/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '' },
+      body: JSON.stringify({ amount: deductInput.value, order_total: "{{ total|floatformat:2 }}" }),
+      keepalive: true,
+    });
+  }
+  const btn = this.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 });
 </script>
 {% endblock %}

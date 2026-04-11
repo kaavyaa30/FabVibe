@@ -1,186 +1,150 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ action }} Address - FabVibe{% endblock %}
+{% block title %}{{ action }} Address — FabVibe{% endblock %}
 
 {% block content %}
-<div class="container py-5" style="max-width:680px;">
+<div class="row">
+  <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
 
-  <div class="mb-4">
-    <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
-       class="text-decoration-none" style="color:#456273;">
-      &larr; {% if next == 'checkout' %}Back to Checkout{% else %}Back to Profile{% endif %}
-    </a>
-  </div>
+    <div class="mb-3">
+      <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
+         class="text-brand text-decoration-none">
+        <i class="fas fa-arrow-left me-1"></i>
+        {% if next == 'checkout' %}Back to Checkout{% else %}Back to Profile{% endif %}
+      </a>
+    </div>
 
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-
-      <h5 class="mb-1 fw-bold" style="color:#456273;">
+    <div class="detail-card">
+      <div class="card-header">
         <i class="fas fa-map-marker-alt me-2"></i>{{ action }} Address
-      </h5>
-      <p class="text-muted mb-4" style="font-size:.9rem;">
-        Fill in your shipping details or use your current location.
-      </p>
-
-      <!-- Use Current Location button -->
-      <button type="button" id="useLocationBtn" class="btn w-100 mb-3 d-flex align-items-center justify-content-center gap-2"
-        style="background:#456273;color:#fff;border:none;padding:.65rem;">
-        <i class="fas fa-location-arrow"></i>
-        <span id="locationBtnText">{% if action == 'Edit' %}Update Location{% else %}Use Current Location{% endif %}</span>
-      </button>
-
-      <!-- Map container (shown after location is fetched) -->
-      <div id="mapContainer" style="display:none;border-radius:10px;overflow:hidden;margin-bottom:1.25rem;">
-        <div id="addressMap" style="height:220px;width:100%;"></div>
-        <div id="mapStatus" class="text-center py-2" style="background:#f0f4f6;font-size:.8rem;color:#456273;"></div>
       </div>
+      <div class="card-body">
+        <p class="text-muted mb-4" style="font-size:.9rem;">
+          Fill in your shipping details or use your current location.
+        </p>
 
-      <form method="post" id="addressForm">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next }}">
+        <!-- Use Current Location -->
+        <button type="button" id="useLocationBtn" class="btn btn-primary w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+          <i class="fas fa-location-arrow"></i>
+          <span id="locationBtnText">{% if action == 'Edit' %}Update Location{% else %}Use Current Location{% endif %}</span>
+        </button>
 
-        <div class="row g-3">
-          <!-- Full Name -->
-          <div class="col-12">
-            <label class="form-label fw-semibold" style="color:#456273;">Full Name *</label>
-            {{ form.full_name }}
-            {% if form.full_name.errors %}<div class="text-danger small mt-1">{{ form.full_name.errors }}</div>{% endif %}
-          </div>
+        <!-- Map -->
+        <div id="mapContainer" style="display:none;border-radius:var(--radius);overflow:hidden;margin-bottom:1.25rem;">
+          <div id="addressMap" style="height:220px;width:100%;"></div>
+          <div id="mapStatus" class="text-center py-2" style="background:var(--brand-pale);font-size:.8rem;color:var(--brand);"></div>
+        </div>
 
-          <!-- Phone -->
-          <div class="col-12">
-            <label class="form-label fw-semibold" style="color:#456273;">Phone Number *</label>
-            {{ form.phone_number }}
-            {% if form.phone_number.errors %}<div class="text-danger small mt-1">{{ form.phone_number.errors }}</div>{% endif %}
-          </div>
+        <form method="post" id="addressForm">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
 
-          <!-- Address Line 1 -->
-          <div class="col-12">
-            <label class="form-label fw-semibold" style="color:#456273;">Address Line 1 *</label>
-            {{ form.address_line1 }}
-            {% if form.address_line1.errors %}<div class="text-danger small mt-1">{{ form.address_line1.errors }}</div>{% endif %}
-          </div>
-
-          <!-- Address Line 2 -->
-          <div class="col-12">
-            <label class="form-label fw-semibold" style="color:#456273;">Address Line 2 <span class="text-muted fw-normal">(optional)</span></label>
-            {{ form.address_line2 }}
-          </div>
-
-          <!-- City + State -->
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" style="color:#456273;">City *</label>
-            {{ form.city }}
-            {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" style="color:#456273;">State *</label>
-            {{ form.state }}
-            {% if form.state.errors %}<div class="text-danger small mt-1">{{ form.state.errors }}</div>{% endif %}
-          </div>
-
-          <!-- Postal Code + Country -->
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" style="color:#456273;">Postal Code *</label>
-            {{ form.postal_code }}
-            {% if form.postal_code.errors %}<div class="text-danger small mt-1">{{ form.postal_code.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" style="color:#456273;">Country *</label>
-            {{ form.country }}
-            {% if form.country.errors %}<div class="text-danger small mt-1">{{ form.country.errors }}</div>{% endif %}
-          </div>
-
-          <!-- Default checkbox -->
-          <div class="col-12">
-            <div class="form-check">
-              {{ form.is_default }}
-              <label class="form-check-label" for="{{ form.is_default.id_for_label }}">
-                Set as default address
-              </label>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-600">Full Name <span class="required-indicator">*</span></label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}<div class="text-danger small mt-1">{{ form.full_name.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-600">Phone Number <span class="required-indicator">*</span></label>
+              {{ form.phone_number }}
+              {% if form.phone_number.errors %}<div class="text-danger small mt-1">{{ form.phone_number.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-600">Address Line 1 <span class="required-indicator">*</span></label>
+              {{ form.address_line1 }}
+              {% if form.address_line1.errors %}<div class="text-danger small mt-1">{{ form.address_line1.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-600">Address Line 2 <span class="text-muted fw-400">(optional)</span></label>
+              {{ form.address_line2 }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600">City <span class="required-indicator">*</span></label>
+              {{ form.city }}
+              {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600">State <span class="required-indicator">*</span></label>
+              {{ form.state }}
+              {% if form.state.errors %}<div class="text-danger small mt-1">{{ form.state.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600">Postal Code <span class="required-indicator">*</span></label>
+              {{ form.postal_code }}
+              {% if form.postal_code.errors %}<div class="text-danger small mt-1">{{ form.postal_code.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600">Country <span class="required-indicator">*</span></label>
+              {{ form.country }}
+              {% if form.country.errors %}<div class="text-danger small mt-1">{{ form.country.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.is_default }}
+                <label class="form-check-label" for="{{ form.is_default.id_for_label }}">
+                  Set as default address
+                </label>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="d-flex gap-2 mt-4">
-          <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
-             class="btn btn-outline-secondary flex-fill">Cancel</a>
-          <button type="submit" class="btn flex-fill text-white" style="background:#456273;border:none;">
-            <i class="fas fa-save me-1"></i> {{ action }} Address
-          </button>
-        </div>
-      </form>
-
+          <div class="d-flex gap-2 mt-4">
+            <a href="{% if next == 'checkout' %}{% url 'orders:checkout' %}{% else %}{% url 'users:profile' %}{% endif %}"
+               class="btn btn-outline-secondary flex-fill">Cancel</a>
+            <button type="submit" class="btn btn-primary flex-fill">
+              <i class="fas fa-save me-1"></i>{{ action }} Address
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
+
   </div>
 </div>
 
-<!-- Leaflet (free, no API key needed) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
-
 <script>
-let map = null;
-let marker = null;
+let map = null, marker = null;
 
 function initMap(lat, lng) {
   document.getElementById('mapContainer').style.display = 'block';
   if (!map) {
     map = L.map('addressMap', { zoomControl: true }).setView([lat, lng], 16);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors', maxZoom: 19,
     }).addTo(map);
-  } else {
-    map.setView([lat, lng], 16);
-  }
-  if (marker) {
-    marker.setLatLng([lat, lng]);
-  } else {
+  } else { map.setView([lat, lng], 16); }
+  if (marker) { marker.setLatLng([lat, lng]); }
+  else {
     marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    marker.on('dragend', function () {
-      const p = marker.getLatLng();
-      reverseGeocode(p.lat, p.lng);
-    });
+    marker.on('dragend', function() { const p = marker.getLatLng(); reverseGeocode(p.lat, p.lng); });
   }
   setTimeout(() => map.invalidateSize(), 150);
 }
 
-document.getElementById('useLocationBtn').addEventListener('click', function () {
-  const btn     = this;
-  const btnText = document.getElementById('locationBtnText');
-  const status  = document.getElementById('mapStatus');
-
-  if (!navigator.geolocation) {
-    alert('Geolocation is not supported by your browser.');
-    return;
-  }
-
+document.getElementById('useLocationBtn').addEventListener('click', function() {
+  const btn = this, btnText = document.getElementById('locationBtnText'), status = document.getElementById('mapStatus');
+  if (!navigator.geolocation) { alert('Geolocation is not supported by your browser.'); return; }
   btnText.textContent = 'Detecting location…';
   btn.disabled = true;
   status.textContent = 'Requesting location…';
   document.getElementById('mapContainer').style.display = 'block';
-
   navigator.geolocation.getCurrentPosition(
-    async function (pos) {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
+    async function(pos) {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
       initMap(lat, lng);
       status.textContent = 'Fetching address…';
       await reverseGeocode(lat, lng);
       btnText.textContent = 'Update Location';
       btn.disabled = false;
     },
-    function (err) {
+    function(err) {
       btnText.textContent = '{% if action == "Edit" %}Update Location{% else %}Use Current Location{% endif %}';
-      btn.disabled = false;
-      status.textContent = '';
-      const msgs = {
-        1: 'Permission denied — please allow location access in browser settings.',
-        2: 'Location unavailable. Try again.',
-        3: 'Timed out. Try again.',
-      };
+      btn.disabled = false; status.textContent = '';
+      const msgs = { 1: 'Permission denied.', 2: 'Location unavailable.', 3: 'Timed out.' };
       alert(msgs[err.code] || 'Could not get location.');
     },
     { timeout: 20000, enableHighAccuracy: true, maximumAge: 0 }
@@ -190,41 +154,28 @@ document.getElementById('useLocationBtn').addEventListener('click', function () 
 async function reverseGeocode(lat, lng) {
   const status = document.getElementById('mapStatus');
   let bdc = null, nom = null;
-
   try {
     const [bdcRes, nomRes] = await Promise.allSettled([
       fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`),
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`, {
-        headers: { 'Accept-Language': 'en' }
-      })
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`, { headers: { 'Accept-Language': 'en' } })
     ]);
     if (bdcRes.status === 'fulfilled' && bdcRes.value.ok) bdc = await bdcRes.value.json();
     if (nomRes.status === 'fulfilled' && nomRes.value.ok) nom = await nomRes.value.json();
   } catch(e) {}
-
-  if (!bdc && !nom) {
-    if (status) status.textContent = '⚠️ Could not fetch address — please fill manually.';
-    return;
-  }
-
+  if (!bdc && !nom) { if (status) status.textContent = '⚠️ Could not fetch address — please fill manually.'; return; }
   const a = nom?.address || {};
-  const line1 = [a.house_number, a.road || a.pedestrian || a.footway || a.path,
-                 a.neighbourhood || a.suburb || a.residential]
-                .filter(Boolean).join(', ')
-                || bdc?.locality || nom?.display_name?.split(',')[0] || '';
-  const line2  = bdc?.locality || a.suburb || a.neighbourhood || a.quarter || '';
-  const city   = a.city || a.city_district || a.town || bdc?.city || a.village || a.county || bdc?.locality || '';
-  const state  = a.state || bdc?.principalSubdivision || '';
+  const line1 = [a.house_number, a.road || a.pedestrian || a.footway || a.path, a.neighbourhood || a.suburb || a.residential].filter(Boolean).join(', ') || bdc?.locality || nom?.display_name?.split(',')[0] || '';
+  const line2 = bdc?.locality || a.suburb || a.neighbourhood || a.quarter || '';
+  const city = a.city || a.city_district || a.town || bdc?.city || a.village || a.county || bdc?.locality || '';
+  const state = a.state || bdc?.principalSubdivision || '';
   const postal = a.postcode || bdc?.postcode || '';
   const country = a.country || bdc?.countryName || 'India';
-
   forceField('id_address_line1', line1);
   forceField('id_address_line2', line2 !== line1 ? line2 : '');
-  forceField('id_city',          city);
-  forceField('id_state',         state);
-  forceField('id_postal_code',   postal);
-  forceField('id_country',       country);
-
+  forceField('id_city', city);
+  forceField('id_state', state);
+  forceField('id_postal_code', postal);
+  forceField('id_country', country);
   const displayCity = city || bdc?.locality || '';
   if (status) status.textContent = `📍 ${line2 ? line2 + ', ' : ''}${displayCity}, ${state} ${postal}`.trim().replace(/,\s*$/, '');
 }
@@ -233,31 +184,25 @@ function forceField(id, value) {
   const el = document.getElementById(id);
   if (el && value !== undefined && value !== null) {
     el.value = value;
-    el.dispatchEvent(new Event('input',  { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 }
 
-// On Edit page: show existing address on map
-window.addEventListener('load', function () {
-  const city    = document.getElementById('id_city')?.value?.trim();
+window.addEventListener('load', function() {
+  const city = document.getElementById('id_city')?.value?.trim();
   const country = document.getElementById('id_country')?.value?.trim();
   if (!city) return;
-  const query = encodeURIComponent(
-    [document.getElementById('id_address_line1')?.value, city, country].filter(Boolean).join(', ')
-  );
-  fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
-    headers: { 'Accept-Language': 'en' }
-  })
-  .then(r => r.json())
-  .then(results => {
-    if (results?.[0]) {
-      initMap(parseFloat(results[0].lat), parseFloat(results[0].lon));
-      document.getElementById('mapStatus').textContent = '📍 ' + results[0].display_name;
-      document.getElementById('locationBtnText').textContent = 'Update Location';
-    }
-  })
-  .catch(() => {});
+  const query = encodeURIComponent([document.getElementById('id_address_line1')?.value, city, country].filter(Boolean).join(', '));
+  fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } })
+    .then(r => r.json())
+    .then(results => {
+      if (results?.[0]) {
+        initMap(parseFloat(results[0].lat), parseFloat(results[0].lon));
+        document.getElementById('mapStatus').textContent = '📍 ' + results[0].display_name;
+        document.getElementById('locationBtnText').textContent = 'Update Location';
+      }
+    }).catch(() => {});
 });
 </script>
 {% endblock %}

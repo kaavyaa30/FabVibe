@@ -121,14 +121,77 @@ function setTracking(q) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PRODUCT IMAGE LOADER
-// No crossOrigin — local Django media has no CORS headers and we don't
-// call toDataURL(), so canvas taint is not a concern.
+// PRODUCT IMAGE LOADER — with background removal
+// Draws the product image into an offscreen canvas, then removes any
+// near-white or near-light pixel (the typical product photo background)
+// by setting its alpha to 0.  The result is stored as a new Image so the
+// rest of the drawing code works unchanged.
 // ═══════════════════════════════════════════════════════════════════════════
 function loadProductImage() {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload  = () => { prodImg = img; resolve(); };
+    img.crossOrigin = 'anonymous';   // needed for getImageData on same-origin media
+    img.onload = () => {
+      // Draw into offscreen canvas so we can manipulate pixels
+      const oc  = document.createElement('canvas');
+      oc.width  = img.naturalWidth;
+      oc.height = img.naturalHeight;
+      const octx = oc.getContext('2d');
+      octx.drawImage(img, 0, 0);
+
+      // Get raw pixel data
+      let data;
+      try {
+        data = octx.getImageData(0, 0, oc.width, oc.height);
+      } catch (e) {
+        // CORS blocked — fall back to raw image (background will show)
+        console.warn('[AR] getImageData blocked, using raw image:', e.message);
+        prodImg = img;
+        resolve();
+        return;
+      }
+
+      const px = data.data;  // flat RGBA array
+
+      // Sample the corner pixels to detect the background colour
+      // (top-left, top-right, bottom-left, bottom-right)
+      function cornerRGB(x, y) {
+        const i = (y * oc.width + x) * 4;
+        return [px[i], px[i+1], px[i+2]];
+      }
+      const corners = [
+        cornerRGB(0, 0),
+        cornerRGB(oc.width - 1, 0),
+        cornerRGB(0, oc.height - 1),
+        cornerRGB(oc.width - 1, oc.height - 1),
+      ];
+      // Average background colour from corners
+      const bgR = corners.reduce((s, c) => s + c[0], 0) / 4;
+      const bgG = corners.reduce((s, c) => s + c[1], 0) / 4;
+      const bgB = corners.reduce((s, c) => s + c[2], 0) / 4;
+
+      // Tolerance: how close a pixel must be to the bg colour to be erased.
+      // 80 works well for white/off-white/light-grey/near-white backgrounds.
+      const TOLERANCE = 80;
+
+      for (let i = 0; i < px.length; i += 4) {
+        const dr = px[i]   - bgR;
+        const dg = px[i+1] - bgG;
+        const db = px[i+2] - bgB;
+        const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+        if (dist < TOLERANCE) {
+          px[i+3] = 0;  // make transparent
+        }
+      }
+
+      octx.putImageData(data, 0, 0);
+
+      // Convert processed canvas back to an Image
+      const cleaned = new Image();
+      cleaned.onload = () => { prodImg = cleaned; resolve(); };
+      cleaned.onerror = () => { prodImg = img; resolve(); };  // fallback
+      cleaned.src = oc.toDataURL('image/png');
+    };
     img.onerror = () => reject(new Error('Could not load product image: ' + IMG_SRC));
     img.src = IMG_SRC;
   });
@@ -320,27 +383,34 @@ function onFaceResults(results) {
 
   // ── SUNGLASSES ────────────────────────────────────────────────────────────
   if (AR_CATEGORY === 'sunglasses') {
-    // Step 1: Get outer eye corner landmarks for scale measurement.
-    // lm 33 = left outer eye corner, lm 263 = right outer eye corner.
-    const lEye = toLandmarkPx(face[33]);
-    const rEye = toLandmarkPx(face[263]);
+    // Eye corner landmarks for scale
+    const lEye   = toLandmarkPx(face[33]);
+    const rEye   = toLandmarkPx(face[263]);
+    // Nose bridge landmark for vertical anchor — sits right between the eyes
+    const bridge = toLandmarkPx(face[168]);
 
-    // Step 2: Measure the pixel distance between the outer eye corners.
-    // This is our scale reference — glasses width = 1.5× this span.
-    const eyeSpan = dist(lEye, rEye);
+    // Eye distance — basis for glasses width
+    const eyeDist = dist(lEye, rEye);
 
-    // Step 3: Calculate head tilt so the glasses rotate with the head.
-    const tilt = lineAngle(lEye, rEye);
+    // Width = 2.2× eye distance
+    const glassesW = eyeDist * 2.2;
+    // Fixed aspect ratio 0.4 — avoids white-padding distortion
+    const glassesH = glassesW * 0.4;
 
-    // Step 4: Find the horizontal center between the two eye corners.
-    // This is where the center of the glasses frame should sit.
-    const cx = (lEye.x + rEye.x) / 2;
-    const cy = (lEye.y + rEye.y) / 2;
+    // X = midpoint between eye corners; Y = nose bridge (sits exactly at eye level)
+    const centerX = (lEye.x + rEye.x) / 2;
+    const centerY = bridge.y;  // nose bridge Y aligns glasses on the eyes
 
-    // Step 5: Draw the transparent glasses PNG.
-    // drawAssetCentered places the CENTER of the image exactly at (cx, cy).
-    // The image is a transparent PNG containing only the glasses shape.
-    drawAssetCentered(cx, cy, eyeSpan * 1.5, tilt);
+    // Head tilt angle
+    const angle = Math.atan2(rEye.y - lEye.y, rEye.x - lEye.x);
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.95;
+    // Center the glasses on the anchor point (half up, half down)
+    ctx.drawImage(prodImg, -glassesW / 2, -glassesH / 2, glassesW, glassesH);
+    ctx.restore();
 
   // ── EARRINGS ──────────────────────────────────────────────────────────────
   } else if (AR_CATEGORY === 'earrings') {

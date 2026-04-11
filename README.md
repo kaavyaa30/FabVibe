@@ -103,23 +103,67 @@ python manage.py backup_db
 - **[tasks.md](.kiro/specs/fabvibe-ecommerce-platform/tasks.md)** - Implementation tasks
 
 ---
-
-## 🔑 Default Credentials
-
-**Admin:**
-- Username: `admin`
-- Password: `admin123`
-
-**Customer:**
-- Username: `kavya`
-- Password: `kavya123`
-
-**Coupons:**
-- WELCOME10 (10% off)
-- SAVE20 (20% off)
-- FREESHIP (free shipping)
-
 ---
+
+## 📸 Screenshots
+
+### Login Page
+
+![Login Page](./images/LoginPage.png)
+
+### Register Page
+
+![Register Page](./images/RegisterPage.png)
+
+### category sunglass Page
+
+![Category sunglass Page](./images/category_sunglasses.png)
+
+### category Page
+
+![category Page](./images/category.png)
+
+### dashboard Page
+
+![Dashboard Page](./images/dashboard.png)
+
+### feature Virtual-Tryon Page
+
+![Virtual-TryOn Page](./images/feature_virtual-tryON.png)
+
+### home Page
+
+![home Page](./images/homepage.png)
+
+### Order_management Page
+
+![Order Management Page](./images/order_management.png)
+
+### Payment Page
+
+![Payment Page](./images/payment.png)
+
+### Product Page
+
+![Product Page](./images/product.png)
+
+### shipping Page
+
+![Shipping Page](./images/shipping.png)
+
+### stock Page
+
+![stock Page](./images/stock.png)
+
+### update location Page
+
+![Update Location Page](./images/update_location.png)
+
+
+
+
+
+
 
 ## 🔧 Configuration
 
@@ -158,4 +202,6 @@ For detailed information, refer to the documentation files listed above.
 **Version:** 1.0.0  
 **Status:** Production Ready ✅
 
-![alt text](image.png)
+
+
+

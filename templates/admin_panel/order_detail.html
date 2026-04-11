@@ -5,27 +5,13 @@
 
 {% block extra_css %}
 <style>
-.mgmt-header { background:linear-gradient(135deg,#456273,#3d5a6b); color:#fff; padding:2rem 0 1.5rem; margin-bottom:2rem; border-radius:0 0 12px 12px; }
+.mgmt-header { background:linear-gradient(135deg, var(--brand), var(--brand-dark)); color:#fff; padding:1.75rem 2rem; margin-bottom:1.75rem; border-radius:var(--radius-lg); }
 .mgmt-header * { color:#fff !important; }
-.detail-card { background:#fff; border:1px solid #e0e0e0; border-radius:14px; margin-bottom:1.5rem; overflow:hidden; }
-.detail-card .card-header { background:linear-gradient(135deg,#456273,#3d5a6b); padding:.9rem 1.5rem; font-weight:700; color:#fff; font-size:.95rem; }
-.detail-card .card-body { padding:1.5rem; }
-.status-badge { padding:.4rem 1rem; border-radius:20px; font-weight:700; font-size:.8rem; text-transform:uppercase; }
-.status-pending        { background:#fff3cd; color:#856404; }
-.status-processing     { background:#cfe2ff; color:#084298; }
-.status-shipped        { background:#d1ecf1; color:#0c5460; }
-.status-out_for_delivery { background:#d1e7dd; color:#0f5132; }
-.status-delivered      { background:#d4edda; color:#155724; }
-.status-cancelled      { background:#c0392b; color:#fff; }
-.item-img { width:64px; height:64px; object-fit:cover; border-radius:10px; border:1px solid #e0e0e0; }
-.price-row td { padding:.35rem 0; }
-.price-row.total td { font-size:1.1rem; font-weight:700; color:#456273; border-top:2px solid #e0e0e0; padding-top:.75rem; }
-.info-row { display:flex; justify-content:space-between; padding:.4rem 0; border-bottom:1px solid #f0f0f0; font-size:.9rem; }
+.info-row { display:flex; justify-content:space-between; padding:.4rem 0; border-bottom:1px solid var(--border); font-size:.9rem; }
 .info-row:last-child { border-bottom:none; }
-.info-label { color:#6c757d; }
+.info-label { color:var(--text-light); }
 .info-value { font-weight:600; text-align:right; }
-.update-form select, .update-form input { border-radius:8px; }
-.otp-display { font-size:2rem; font-weight:700; letter-spacing:.3em; color:#456273; }
+.otp-display { font-size:2rem; font-weight:700; letter-spacing:.3em; color:var(--brand); }
 </style>
 {% endblock %}
 
@@ -33,23 +19,19 @@
 
 <!-- Header -->
 <div class="mgmt-header">
-  <div class="container">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <a href="{% url 'admin_panel:order_list' %}" class="text-white opacity-75 small mb-2 d-inline-block">
-          <i class="fas fa-arrow-left me-1"></i>Back to Orders
-        </a>
-        <h1 class="mb-1">Order {{ order.order_id }}</h1>
-        <p class="mb-0 opacity-75">Placed {{ order.created_at|date:"F d, Y h:i A" }}</p>
-      </div>
-      <span class="status-badge status-{{ order.status }} align-self-start mt-2">
-        {{ order.get_status_display }}
-      </span>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <a href="{% url 'admin_panel:order_list' %}" class="text-white opacity-75 small mb-2 d-inline-block">
+        <i class="fas fa-arrow-left me-1"></i>Back to Orders
+      </a>
+      <h1 class="mb-1">Order {{ order.order_id }}</h1>
+      <p class="mb-0 opacity-75">Placed {{ order.created_at|date:"F d, Y h:i A" }}</p>
     </div>
+    <span class="status-badge status-{{ order.status }} align-self-start mt-2">
+      {{ order.get_status_display }}
+    </span>
   </div>
 </div>
-
-<div class="container">
   {% if messages %}
     {% for msg in messages %}
       <div class="alert alert-{{ msg.tags }} alert-dismissible fade show mb-3">
@@ -220,5 +202,4 @@
 
     </div>
   </div>
-</div>
 {% endblock %}
