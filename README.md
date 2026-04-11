@@ -115,6 +115,14 @@ python manage.py backup_db
 
 ![Register Page](./images/RegisterPage.png)
 
+### home Page
+
+![home Page](./images/homepage.png)
+
+### dashboard Page
+
+![Dashboard Page](./images/dashboard.png)
+
 ### category sunglass Page
 
 ![Category sunglass Page](./images/category_sunglasses.png)
@@ -123,17 +131,9 @@ python manage.py backup_db
 
 ![category Page](./images/category.png)
 
-### dashboard Page
-
-![Dashboard Page](./images/dashboard.png)
-
 ### feature Virtual-Tryon Page
 
 ![Virtual-TryOn Page](./images/feature_virtual-tryON.png)
-
-### home Page
-
-![home Page](./images/homepage.png)
 
 ### Order_management Page
 
