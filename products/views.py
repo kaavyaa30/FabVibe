@@ -937,6 +937,30 @@ def tryon_history(request):
     return render(request, 'products/tryon_history.html', {'records': records})
 
 
+@login_required
+@require_http_methods(["POST"])
+def delete_tryon_record(request, record_id):
+    """Delete a single try-on history record for the logged-in user."""
+    from .models import TryOnHistory
+    import os
+    from django.conf import settings
+
+    record = get_object_or_404(TryOnHistory, id=record_id, user=request.user)
+
+    # Delete the result image file from disk to free space
+    for field in (record.result_image, getattr(record, 'original_image', None)):
+        if field:
+            try:
+                path = os.path.join(settings.MEDIA_ROOT, str(field))
+                if os.path.exists(path):
+                    os.unlink(path)
+            except Exception:
+                pass
+
+    record.delete()
+    return JsonResponse({'success': True})
+
+
 def get_product_sizes(request, product_id):
     """Return available sizes for a product (used by My Wardrobe add-to-cart)."""
     from .models import Inventory
@@ -952,6 +976,80 @@ def get_product_sizes(request, product_id):
 
 
 # ── AR Try-On (MediaPipe — fully client-side) ─────────────────────────────────
+
+def ar_asset(request, product_id):
+    """
+    Serve a background-removed PNG for AR overlay.
+    - rembg runs in a thread with 10s timeout so it never blocks the page
+    - Falls back to PIL corner-fill if rembg times out or isn't installed
+    - Result cached in media/ar_cache/<id>.png
+    """
+    import os, threading
+    from django.conf import settings
+    from django.http import FileResponse, HttpResponse
+
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+
+    # Static override (sunglasses uses hand-drawn asset)
+    STATIC_AR = {'accessories-sunglasses': 'ar_assets/sunglasses.png'}
+    cat_slug = product.category.slug if product.category else ''
+    if cat_slug in STATIC_AR:
+        static_path = os.path.join(settings.BASE_DIR, 'static', STATIC_AR[cat_slug])
+        if os.path.exists(static_path):
+            return FileResponse(open(static_path, 'rb'), content_type='image/png')
+
+    cache_dir = os.path.join(settings.MEDIA_ROOT, 'ar_cache')
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, f'{product_id}.png')
+
+    if os.path.exists(cache_path):
+        return FileResponse(open(cache_path, 'rb'), content_type='image/png')
+
+    img_obj = product.images.filter(is_primary=True).first() or product.images.first()
+    if not img_obj:
+        return HttpResponse(status=404)
+    src_path = os.path.join(settings.MEDIA_ROOT, img_obj.image.name)
+    if not os.path.exists(src_path):
+        return HttpResponse(status=404)
+
+    # ── Try rembg in a thread with timeout ───────────────────────────────────
+    result_holder = [None]
+    def _rembg():
+        try:
+            from rembg import remove
+            with open(src_path, 'rb') as f:
+                data = f.read()
+            result_holder[0] = remove(data)
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_rembg, daemon=True)
+    t.start()
+    t.join(timeout=10)  # wait max 10 seconds
+
+    if result_holder[0]:
+        with open(cache_path, 'wb') as f:
+            f.write(result_holder[0])
+        return FileResponse(open(cache_path, 'rb'), content_type='image/png')
+
+    # ── PIL fallback ──────────────────────────────────────────────────────────
+    try:
+        from PIL import Image as PILImage
+        import numpy as np
+        img = PILImage.open(src_path).convert('RGBA')
+        data = np.array(img, dtype=np.float32)
+        corners = [data[0,0,:3], data[0,-1,:3], data[-1,0,:3], data[-1,-1,:3]]
+        bg = np.mean(corners, axis=0)
+        diff = np.sqrt(np.sum((data[:,:,:3] - bg)**2, axis=2))
+        data[:,:,3] = np.where(diff < 60, 0, data[:,:,3])
+        PILImage.fromarray(data.astype(np.uint8), 'RGBA').save(cache_path, 'PNG')
+        return FileResponse(open(cache_path, 'rb'), content_type='image/png')
+    except Exception:
+        pass
+
+    # Last resort: serve original
+    return FileResponse(open(src_path, 'rb'), content_type='image/png')
+
 
 def ar_tryon(request, product_id):
     """
@@ -979,14 +1077,11 @@ def ar_tryon(request, product_id):
     if cat_slug in STATIC_AR_ASSETS:
         product_image_url = request.build_absolute_uri(static(STATIC_AR_ASSETS[cat_slug]))
     else:
-        # Prefer PNG images (transparent background) for clean overlay
-        img = (
-            product.images.filter(image__endswith='.png', is_primary=True).first()
-            or product.images.filter(image__endswith='.png').first()
-            or product.images.filter(is_primary=True).first()
-            or product.images.first()
+        # Use the ar_asset endpoint which does server-side background removal
+        from django.urls import reverse
+        product_image_url = request.build_absolute_uri(
+            reverse('products:ar_asset', args=[product.id])
         )
-        product_image_url = img.image.url if img else ''
 
     # ── Map category slug → (ar_mode, ar_category keyword) ───────────────────
     # ar_mode     → which MediaPipe solution to load (face / hands / pose)
@@ -1016,6 +1111,12 @@ def ar_tryon(request, product_id):
         # Pose — footwear
         'men-shoes':              ('pose',  'shoes'),
         'women-heels':            ('pose',  'heels'),
+        # Face — hats / caps
+        'accessories-caps':       ('face',  'caps'),
+        'accessories-hats':       ('face',  'hats'),
+        # Face — makeup
+        'makeup-lipstick':        ('face',  'lipstick'),
+        'women-makeup':           ('face',  'makeup'),
     }
 
     ar_mode, ar_category = SLUG_MAP.get(cat_slug, ('pose', 'tops'))

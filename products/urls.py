@@ -30,4 +30,8 @@ urlpatterns = [
     path('product/<int:product_id>/sizes/', views.get_product_sizes, name='get_product_sizes'),
     # AR Try-On (MediaPipe — client-side only)
     path('product/<int:product_id>/ar-tryon/', views.ar_tryon, name='ar_tryon'),
+    # Background removal for AR assets
+    path('product/<int:product_id>/ar-asset/', views.ar_asset, name='ar_asset'),
+    # Delete try-on history record
+    path('tryon/history/<int:record_id>/delete/', views.delete_tryon_record, name='delete_tryon_record'),
 ]

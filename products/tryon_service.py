@@ -145,19 +145,13 @@ def filter_and_sort_garments(garment_infos: list) -> list:
 _VTON_W, _VTON_H = 768, 1024   # native 3:4 portrait
 
 def _prepare_image(src_path: str, width: int = _VTON_W, height: int = _VTON_H,
-                   quality: int = 85) -> str:
+                   quality: int = 92) -> str:
     """
-    Resize + center-crop *src_path* to *width × height* (3:4 by default),
-    convert to RGB, and save as a compressed JPEG to a temp file.
+    Resize *src_path* to fit within *width × height* (letterbox/pillarbox with
+    white padding), then save as JPEG.
 
-    Returns the temp file path.  Caller is responsible for deleting it.
-
-    Strategy:
-    1. Scale the image so the shorter side fills the target dimension
-       (scale-to-fill, not scale-to-fit) — no black bars.
-    2. Center-crop the longer side to the exact target size.
-    3. Save as JPEG at *quality* (default 92) — good quality, ~40–60 % smaller
-       than a raw PNG, which speeds up the HF upload and reduces timeout risk.
+    Using fit-with-padding instead of scale-to-fill prevents the person from
+    being cropped out of frame — the most common cause of OpenPose step-1 failures.
     """
     try:
         from PIL import Image
@@ -168,21 +162,22 @@ def _prepare_image(src_path: str, width: int = _VTON_W, height: int = _VTON_H,
         img = img.convert('RGB')
         src_w, src_h = img.size
 
-        # Scale so the image covers the target rectangle (scale-to-fill)
-        scale = max(width / src_w, height / src_h)
+        # Scale to FIT inside target (no cropping — preserve full body)
+        scale = min(width / src_w, height / src_h)
         new_w = round(src_w * scale)
         new_h = round(src_h * scale)
         img = img.resize((new_w, new_h), Image.LANCZOS)
 
-        # Center-crop to exact target size
-        left = (new_w - width)  // 2
-        top  = (new_h - height) // 2
-        img  = img.crop((left, top, left + width, top + height))
+        # Paste onto white canvas centered
+        canvas = Image.new('RGB', (width, height), (255, 255, 255))
+        offset_x = (width  - new_w) // 2
+        offset_y = (height - new_h) // 2
+        canvas.paste(img, (offset_x, offset_y))
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
         tmp.close()
-        img.save(tmp.name, format='JPEG', quality=quality, optimize=True)
-        logger.debug(f"[VTON prep] {src_path} → {width}×{height} JPEG @ q{quality} → {tmp.name}")
+        canvas.save(tmp.name, format='JPEG', quality=quality, optimize=True)
+        logger.debug(f"[VTON prep] {src_path} → {width}×{height} padded JPEG @ q{quality} → {tmp.name}")
         return tmp.name
 
 
@@ -253,11 +248,11 @@ def _call_hf(person_path: str, garment_path: str, vton_category: str = 'upper_bo
 
         try:
             result = client.predict(
-                handle_file(person_prep),  # person image — plain file, not editor dict
+                {"background": handle_file(person_prep), "layers": [], "composite": handle_file(person_prep)},
                 handle_file(garment_prep),
                 description,
                 True,              # is_checked — auto-masking
-                False,             # is_checked_crop — disabled to prevent body cropping
+                True,              # is_checked_crop — enable auto-crop to isolate person
                 30,                # denoise steps
                 42,                # seed
                 api_name="/tryon",

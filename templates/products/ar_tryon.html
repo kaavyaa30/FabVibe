@@ -64,6 +64,12 @@ body { background: #0d1117; }
       {% if ar_mode == 'face' %}
         <li>Face the camera directly in good lighting.</li>
         <li>Keep your full face visible and centred.</li>
+        {% if ar_category == 'hats' or ar_category == 'caps' %}
+        <li>Make sure the top of your head is visible in frame.</li>
+        {% elif ar_category == 'lipstick' or ar_category == 'makeup' %}
+        <li>Face the camera straight-on for best lip detection.</li>
+        <li>Good lighting gives the most accurate color.</li>
+        {% endif %}
       {% elif ar_mode == 'hands' %}
         <li>Hold your hand open, palm facing the camera.</li>
         <li>Keep your hand steady and well-lit.</li>
@@ -128,71 +134,31 @@ function setTracking(q) {
 // rest of the drawing code works unchanged.
 // ═══════════════════════════════════════════════════════════════════════════
 function loadProductImage() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    if (!IMG_SRC) { resolve(); return; }
+    console.log('[AR] Loading product image:', IMG_SRC);
     const img = new Image();
-    img.crossOrigin = 'anonymous';   // needed for getImageData on same-origin media
+    img.crossOrigin = 'anonymous';
     img.onload = () => {
-      // Draw into offscreen canvas so we can manipulate pixels
-      const oc  = document.createElement('canvas');
-      oc.width  = img.naturalWidth;
-      oc.height = img.naturalHeight;
-      const octx = oc.getContext('2d');
-      octx.drawImage(img, 0, 0);
-
-      // Get raw pixel data
-      let data;
-      try {
-        data = octx.getImageData(0, 0, oc.width, oc.height);
-      } catch (e) {
-        // CORS blocked — fall back to raw image (background will show)
-        console.warn('[AR] getImageData blocked, using raw image:', e.message);
-        prodImg = img;
-        resolve();
-        return;
-      }
-
-      const px = data.data;  // flat RGBA array
-
-      // Sample the corner pixels to detect the background colour
-      // (top-left, top-right, bottom-left, bottom-right)
-      function cornerRGB(x, y) {
-        const i = (y * oc.width + x) * 4;
-        return [px[i], px[i+1], px[i+2]];
-      }
-      const corners = [
-        cornerRGB(0, 0),
-        cornerRGB(oc.width - 1, 0),
-        cornerRGB(0, oc.height - 1),
-        cornerRGB(oc.width - 1, oc.height - 1),
-      ];
-      // Average background colour from corners
-      const bgR = corners.reduce((s, c) => s + c[0], 0) / 4;
-      const bgG = corners.reduce((s, c) => s + c[1], 0) / 4;
-      const bgB = corners.reduce((s, c) => s + c[2], 0) / 4;
-
-      // Tolerance: how close a pixel must be to the bg colour to be erased.
-      // 80 works well for white/off-white/light-grey/near-white backgrounds.
-      const TOLERANCE = 80;
-
-      for (let i = 0; i < px.length; i += 4) {
-        const dr = px[i]   - bgR;
-        const dg = px[i+1] - bgG;
-        const db = px[i+2] - bgB;
-        const dist = Math.sqrt(dr*dr + dg*dg + db*db);
-        if (dist < TOLERANCE) {
-          px[i+3] = 0;  // make transparent
-        }
-      }
-
-      octx.putImageData(data, 0, 0);
-
-      // Convert processed canvas back to an Image
-      const cleaned = new Image();
-      cleaned.onload = () => { prodImg = cleaned; resolve(); };
-      cleaned.onerror = () => { prodImg = img; resolve(); };  // fallback
-      cleaned.src = oc.toDataURL('image/png');
+      console.log('[AR] prodImg ready', img.naturalWidth, 'x', img.naturalHeight);
+      prodImg = img;
+      resolve();
     };
-    img.onerror = () => reject(new Error('Could not load product image: ' + IMG_SRC));
+    img.onerror = () => {
+      console.error('[AR] Failed to load product image:', IMG_SRC);
+      // Canvas fallback — draw simple sunglasses shape
+      const fc = document.createElement('canvas');
+      fc.width = 400; fc.height = 160;
+      const fctx = fc.getContext('2d');
+      fctx.strokeStyle = 'rgba(20,20,20,0.9)'; fctx.lineWidth = 8;
+      fctx.fillStyle = 'rgba(10,10,10,0.55)';
+      fctx.beginPath(); fctx.ellipse(95,80,75,50,0,0,Math.PI*2); fctx.fill(); fctx.stroke();
+      fctx.beginPath(); fctx.ellipse(305,80,75,50,0,0,Math.PI*2); fctx.fill(); fctx.stroke();
+      fctx.beginPath(); fctx.moveTo(170,80); fctx.lineTo(230,80); fctx.stroke();
+      const fallback = new Image();
+      fallback.onload = () => { prodImg = fallback; resolve(); };
+      fallback.src = fc.toDataURL('image/png');
+    };
     img.src = IMG_SRC;
   });
 }
@@ -203,10 +169,15 @@ function loadProductImage() {
 async function startCamera() {
   if (stream) stream.getTracks().forEach(t => t.stop());
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
+    // Timeout after 8 seconds if camera permission is never answered
+    const camPromise = navigator.mediaDevices.getUserMedia({
       video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false,
     });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Camera permission timed out. Please allow camera access and refresh.')), 8000)
+    );
+    stream = await Promise.race([camPromise, timeoutPromise]);
     video.srcObject = stream;
     await new Promise(r => { video.onloadedmetadata = r; });
     await video.play();
@@ -214,7 +185,12 @@ async function startCamera() {
     canvas.height = video.videoHeight || 480;
     return true;
   } catch (e) {
-    setStatus('Camera Error', e.message || 'Cannot access camera.');
+    let msg = e.message || 'Cannot access camera.';
+    if (e.name === 'NotAllowedError' || msg.includes('Permission'))
+      msg = 'Camera access denied. Please click the camera icon in your browser address bar and allow access, then refresh.';
+    else if (e.name === 'NotFoundError')
+      msg = 'No camera found on this device.';
+    setStatus('Camera Error', msg);
     return false;
   }
 }
@@ -441,8 +417,86 @@ function onFaceResults(results) {
   } else if (AR_CATEGORY === 'necklaces') {
     const chin  = toLandmarkPx(face[152]);
     const faceW = dist(toLandmarkPx(face[234]), toLandmarkPx(face[454]));
-    // Drop center below chin by 55% of face width
     drawAssetCentered(chin.x, chin.y + faceW * 0.55, faceW * 1.1);
+
+  // ── HATS / CAPS ───────────────────────────────────────────────────────────
+  // lm 10  = forehead top (head crown anchor)
+  // lm 234 = left cheek edge  }  face width reference
+  // lm 454 = right cheek edge }
+  // lm 168 = nose bridge (vertical reference for hat depth)
+  } else if (AR_CATEGORY === 'hats' || AR_CATEGORY === 'caps') {
+    const crown  = toLandmarkPx(face[10]);
+    const faceW  = dist(toLandmarkPx(face[234]), toLandmarkPx(face[454]));
+    const bridge = toLandmarkPx(face[168]);
+
+    // Hat width = 1.5× face width so brim extends past ears
+    const hatW = faceW * 1.5;
+    // Natural aspect ratio of the hat image
+    const hatAR = prodImg ? prodImg.naturalHeight / prodImg.naturalWidth : 0.8;
+    const hatH  = hatW * hatAR;
+
+    // Head tilt angle (left-eye corner → right-eye corner)
+    const lEye = toLandmarkPx(face[33]);
+    const rEye = toLandmarkPx(face[263]);
+    const angle = Math.atan2(rEye.y - lEye.y, rEye.x - lEye.x);
+
+    // Anchor: center of hat bottom edge sits at the crown landmark.
+    // Shift the hat UP by hatH * 0.5 so the brim sits at crown level.
+    const cx = crown.x;
+    const cy = crown.y - hatH * 0.5;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.93;
+    ctx.drawImage(prodImg, -hatW / 2, -hatH / 2, hatW, hatH);
+    ctx.restore();
+
+  // ── MAKEUP — lipstick ─────────────────────────────────────────────────────
+  // Uses canvas blend mode 'multiply' to tint the lips without a product image.
+  // The lip color is extracted from the product's primary image (dominant hue).
+  // Lip landmarks (outer ring): 61,185,40,39,37,0,267,269,270,409,291,
+  //                              375,321,405,314,17,84,181,91,146
+  } else if (AR_CATEGORY === 'lipstick' || AR_CATEGORY === 'makeup') {
+    // Outer lip landmark indices (MediaPipe 468-point mesh)
+    const OUTER_LIPS = [61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146];
+
+    // Extract dominant color from product image (sample center strip)
+    let lipColor = '#c0392b';  // fallback red
+    if (prodImg) {
+      try {
+        const sc = document.createElement('canvas');
+        sc.width = prodImg.naturalWidth; sc.height = prodImg.naturalHeight;
+        const sctx = sc.getContext('2d');
+        sctx.drawImage(prodImg, 0, 0);
+        // Sample a 10×10 patch from the center of the product image
+        const cx2 = Math.floor(sc.width / 2), cy2 = Math.floor(sc.height / 2);
+        const d = sctx.getImageData(cx2 - 5, cy2 - 5, 10, 10).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i+3] > 128) { r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
+        }
+        if (n > 0) lipColor = `rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`;
+      } catch(e) { /* CORS — use fallback */ }
+    }
+
+    // Build lip path from landmarks
+    ctx.save();
+    ctx.beginPath();
+    const first = toLandmarkPx(face[OUTER_LIPS[0]]);
+    ctx.moveTo(first.x, first.y);
+    for (let i = 1; i < OUTER_LIPS.length; i++) {
+      const pt = toLandmarkPx(face[OUTER_LIPS[i]]);
+      ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.closePath();
+
+    // 'multiply' blend darkens the lip area with the chosen color
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = 0.72;
+    ctx.fillStyle = lipColor;
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -620,8 +674,7 @@ async function initModel() {
 // BOOT
 // ═══════════════════════════════════════════════════════════════════════════
 async function boot() {
-  try { await loadProductImage(); }
-  catch (e) { console.warn('Product image load failed:', e.message); }
+  await loadProductImage();  // always resolves — fallback canvas shape if image fails
 
   const camOk = await startCamera();
   if (!camOk) return;

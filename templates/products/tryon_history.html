@@ -139,14 +139,24 @@
                  class="btn btn-outline-secondary" title="Download">
                 <i class="fas fa-download"></i>
               </a>
+              <button class="btn btn-outline-danger" title="Remove from wardrobe"
+                      data-url="{% url 'products:delete_tryon_record' r.id %}"
+                      onclick="deleteRecord(this)">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>
           {% else %}
             <div class="product-name text-muted fst-italic">Product no longer available</div>
             <div class="mt-auto card-actions">
               <a href="{{ r.result_image.url }}" download="fabvibe-tryon.jpg"
-                 class="btn btn-outline-secondary w-100">
+                 class="btn btn-outline-secondary flex-fill">
                 <i class="fas fa-download me-1"></i>Download
               </a>
+              <button class="btn btn-outline-danger" title="Remove from wardrobe"
+                      data-url="{% url 'products:delete_tryon_record' r.id %}"
+                      onclick="deleteRecord(this)">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>
           {% endif %}
         </div>
@@ -183,6 +193,40 @@
 {% block extra_js %}
 <script>
 const CSRF = "{{ csrf_token }}";
+
+function deleteRecord(btn) {
+  if (!confirm('Remove this try-on from your wardrobe?')) return;
+  const url = btn.dataset.url;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+    credentials: 'same-origin',
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      const card = btn.closest('.col-6, .col-sm-4, .col-lg-3');
+      if (card) {
+        card.style.transition = 'opacity .3s, transform .3s';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.9)';
+        setTimeout(() => card.remove(), 320);
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-trash"></i>';
+      alert('Could not delete. Please try again.');
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-trash"></i>';
+    alert('Network error. Please try again.');
+  });
+}
 let _pendingProductId = null, _pendingBtn = null, _selectedSize = null;
 
 document.addEventListener('DOMContentLoaded', function() {
