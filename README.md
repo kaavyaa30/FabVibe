@@ -1,207 +1,141 @@
-# FabVibe E-Commerce Platform
+# FabVibe — E-Commerce Platform
 
-A fully functional Django-based e-commerce platform for selling clothing online.
+A full-featured Django e-commerce platform for clothing, built with a custom admin panel, virtual try-on, wallet system, and order management.
+
+---
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
-
-# Run migrations
 python manage.py migrate
-
-# Load sample data
-python manage.py populate_sample_data
-python load_sample_data.py
-
-# Run development server
 python manage.py runserver
 ```
 
-**Access the platform:**
 - Frontend: http://localhost:8000/
-- Admin: http://localhost:8000/admin/ (admin/admin123)
+- Admin Panel: http://localhost:8000/admin-panel/
 
 ---
 
-## 📊 Platform Overview
+## 🏗️ Project Structure
 
-- **80 Products** across 4 main categories
-- **16 Subcategories** with 5 products each
-- **Complete e-commerce functionality** from browsing to checkout
-- **Admin dashboard** for business management
-
----
-
-## 🏗️ Category Structure
-
-```
-├── Accessories (20 products)
-│   ├── Bags, Belts, Sunglasses, Watches
-├── Kids (15 products)
-│   ├── Boys, Girls, Infants
-├── Men (25 products)
-│   ├── Jackets, Jeans, Shirts, Shoes, T-Shirts
-└── Women (20 products)
-    ├── Dresses, Heels, Skirts, Tops
-```
+| App | Purpose |
+|---|---|
+| `users` | Custom auth, OTP login, profile & addresses |
+| `products` | Catalog, categories, inventory, wishlist, reviews |
+| `cart` | Shopping cart with coupon support |
+| `orders` | Checkout, order tracking, returns & exchanges |
+| `wallet` | In-app wallet with credit/debit transactions |
+| `admin_panel` | Custom dashboard for managing the store |
 
 ---
 
-## ✨ Features
+## ✨ Features Built
 
-### Customer Features
-✅ User registration & authentication  
-✅ Product browsing & search  
-✅ Shopping cart & wishlist  
-✅ Checkout with multiple payment methods  
-✅ Order tracking & history  
-✅ Returns & exchanges  
-✅ Invoice generation  
+### User System
+- Custom user model with email/phone login
+- OTP-based verification (email & SMS)
+- Profile with body measurements for size recommendations
+- Multiple saved addresses
+- Password complexity validation
 
-### Admin Features
-✅ Dashboard with metrics  
-✅ Product & category management  
-✅ Order management  
-✅ Inventory tracking  
-✅ User management  
-✅ Banner management  
+### Product Catalog
+- 80+ products across 4 categories (Men, Women, Kids, Accessories)
+- 16 subcategories with images
+- Product sizes, colors, and per-size inventory tracking
+- Product reviews & ratings
+- Wishlist
+- Recently viewed products
+- Stock alerts (notify when back in stock)
+- Homepage banners
+
+### Shopping Cart
+- Add/remove items with size selection
+- Coupon code support
+- Cart persists for logged-in users
+
+### Orders
+- Checkout with multiple payment methods: COD, UPI, Card (Razorpay)
+- Wallet split payment (pay part from wallet, rest via gateway)
+- Order status tracking: Pending → Processing → Shipped → Out for Delivery → Delivered
+- OTP-based delivery verification
+- Return & exchange requests (within 7 days)
+- Invoice generation
+- Email notifications via Brevo (Sendinblue)
+
+### Wallet
+- Auto-credited on order cancellations and approved returns
+- Full transaction history with balance tracking
+- Can be used partially or fully at checkout
+
+### Virtual Try-On
+- Upload a photo and try on clothing virtually (AI-powered via Hugging Face IDM-VTON)
+- Try-on history saved per user
+- AR try-on for accessories (sunglasses)
+
+### Admin Panel (Custom)
+- Dashboard with sales metrics
+- Product & category management with image upload
+- Order management with status updates and location tracking
+- Inventory management with low-stock alerts and logs
+- User management
+- Banner management
+- Return & exchange approval workflow
+- Celery-based async tasks (order emails, stock notifications)
 
 ---
 
-## 🛠️ Utility Scripts
+## 🛠️ Tech Stack
 
-```bash
-# List all categories
-python list_categories.py
-
-# List all users
-python list_users.py
-
-# List all products
-python list_all_products.py
-
-# Upload product images
-python upload_image.py <source> <destination> --type product
-
-# Reset users to default
-python setup_users.py
-
-# Backup database
-python manage.py backup_db
-```
+- **Backend:** Django 4.x, Python 3.11
+- **Database:** SQLite3 (development)
+- **Async Tasks:** Celery with filesystem broker
+- **Payments:** Razorpay
+- **Email:** Brevo (Sendinblue) transactional API
+- **SMS/WhatsApp:** Twilio / Fast2SMS / WhatsApp API
+- **AI Try-On:** Hugging Face IDM-VTON (ZeroGPU)
+- **Frontend:** Bootstrap 4, custom CSS/JS
 
 ---
 
-## 📚 Documentation
+## ⚙️ Configuration
 
-- **[CATEGORIES_LIST.md](CATEGORIES_LIST.md)** - Complete category hierarchy
-- **[UTILITY_SCRIPTS.md](UTILITY_SCRIPTS.md)** - Script usage guide
-- **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Detailed project overview
-- **[requirements.md](.kiro/specs/fabvibe-ecommerce-platform/requirements.md)** - Full requirements
-- **[tasks.md](.kiro/specs/fabvibe-ecommerce-platform/tasks.md)** - Implementation tasks
-
----
----
-
-## 📸 Screenshots
-
-### Login Page
-
-![Login Page](./images/LoginPage.png)
-
-### Register Page
-
-![Register Page](./images/RegisterPage.png)
-
-### home Page
-
-![home Page](./images/homepage.png)
-
-### dashboard Page
-
-![Dashboard Page](./images/dashboard.png)
-
-### category sunglass Page
-
-![Category sunglass Page](./images/category_sunglasses.png)
-
-### category Page
-
-![category Page](./images/category.png)
-
-### feature Virtual-Tryon Page
-
-![Virtual-TryOn Page](./images/feature_virtual-tryON.png)
-
-### Order_management Page
-
-![Order Management Page](./images/order_management.png)
-
-### Payment Page
-
-![Payment Page](./images/payment.png)
-
-### Product Page
-
-![Product Page](./images/product.png)
-
-### shipping Page
-
-![Shipping Page](./images/shipping.png)
-
-### stock Page
-
-![stock Page](./images/stock.png)
-
-### update location Page
-
-![Update Location Page](./images/update_location.png)
-
-
-
-
-
-
-
-## 🔧 Configuration
-
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and fill in:
 
 ```env
 SECRET_KEY=your-secret-key
 DEBUG=True
 EMAIL_HOST_USER=your-email
-TWILIO_ACCOUNT_SID=your-twilio-sid
+BREVO_API_KEY=your-brevo-key
 RAZORPAY_KEY_ID=your-razorpay-key
+RAZORPAY_KEY_SECRET=your-razorpay-secret
+HF_TOKEN=your-huggingface-token
+TWILIO_ACCOUNT_SID=your-twilio-sid
 ```
 
 ---
 
-## 📦 Technology Stack
+## 📸 Screenshots
 
-- Django 4.x
-- SQLite3 (development)
-- Celery (async tasks)
-- Bootstrap (frontend)
-- Pillow (image processing)
+| Page | Preview |
+|---|---|
+| Login | ![](./images/LoginPage.png) |
+| Register | ![](./images/RegisterPage.png) |
+| Home | ![](./images/homepage.png) |
+| Dashboard | ![](./images/dashboard.png) |
+| Category | ![](./images/category.png) |
+| Category (Sunglasses) | ![](./images/category_sunglasses.png) |
+| Product | ![](./images/product.png) |
+| Virtual Try-On | ![](./images/feature_virtual-tryON.png) |
+| Payment | ![](./images/payment.png) |
+| Order Management | ![](./images/order_management.png) |
+| Shipping | ![](./images/shipping.png) |
+| Stock | ![](./images/stock.png) |
+| Update Location | ![](./images/update_location.png) |
 
 ---
 
 ## 📝 License
 
-Proprietary - FabVibe E-Commerce Platform
-
----
-
-## 📞 Support
-
-For detailed information, refer to the documentation files listed above.
-
-**Version:** 1.0.0  
-**Status:** Production Ready ✅
-
-
-
-
+Proprietary — FabVibe E-Commerce Platform  
+**Version:** 1.0.0
