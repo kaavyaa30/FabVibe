@@ -121,7 +121,7 @@ TWILIO_ACCOUNT_SID=your-twilio-sid
 |---|---|
 | Login | ![](./images/LoginPage.png) |
 | Register | ![](./images/RegisterPage.png) |
-| Home | ![](./images/HomePage.png) |
+| Home | ![](./images/homepage.png) |
 | Dashboard | ![](./images/dashboard.png) |
 | Category | ![](./images/category.png) |
 | Category (Sunglasses) | ![](./images/category_sunglasses.png) |
